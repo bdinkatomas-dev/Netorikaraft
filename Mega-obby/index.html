@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - 3D Mega Obby</title>
+    <title>Netorikaraft - Mega Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -34,13 +34,21 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* 3D PLÁTNO PŘES CELOU OBRAZOVKU */
         #gameCanvas {
             position: absolute;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             display: block;
             z-index: 1;
+        }
+
+        #fallbackCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            display: none;
+            z-index: 2;
+            background: #0d0e12;
         }
 
         #gameHeader {
@@ -71,7 +79,6 @@
         }
         .btn-leave:hover { background: var(--danger-hover); }
 
-        /* MOBILNÍ DOTYKOVÉ ELEMENTY */
         #mobileControls {
             position: absolute;
             bottom: 40px; left: 0; width: 100%;
@@ -101,15 +108,16 @@
 
     <div id="gameHeader">
         <div class="brand-zone">
-            <span class="logo-icon">🧱</span>
-            <span class="brand-name">Netorikaraft 3D</span>
-            <span class="game-tag" id="dynamicGameName">3D Mega Obby</span>
+            <span class="logo-icon">🎮</span>
+            <span class="brand-name">Netorikaraft</span>
+            <span class="game-tag" id="dynamicGameName">Mega Obby</span>
             <span class="level-tag" id="levelDisplay">Level 1 / 100</span>
         </div>
         <button class="btn-leave" onclick="vratSeDoLobby()">Leave</button>
     </div>
 
     <div id="gameCanvas"></div>
+    <canvas id="fallbackCanvas"></canvas>
 
     <div id="mobileControls">
         <div class="move-btns">
@@ -122,213 +130,155 @@
     </div>
 
     <script>
-        // --- KLÍČE PRO SUPABASE (POKUD CHYBÍ, HRA BĚŽÍ BEZ CHYBY AUTOMATICKY OFFLINE) ---
-        const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
+        const SUPABASE_URL = "TVOJE_SUPABASE_URL";
+        const SUPABASE_KEY = "TVŮJ_ANON_KEY";
         
         let sb = null;
         let mojeId = null;
         let mujUsername = "Hráč";
-        let mojeBarva = Math.floor(Math.random() * 16777215); 
+        let mojeBarvaHex = "#" + Math.floor(Math.random()*16777215).toString(16);
         let mujLevel = 1;
         let mmoKanal = null;
         let vzdaleniHraci = {};
 
-        // Bezpečná inicializace databáze
+        let pouzit2DFallback = false;
+        const canvas2D = document.getElementById('fallbackCanvas');
+        const ctx2D = canvas2D.getContext('2d');
+
         try {
             if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "TVOJE_SUPABASE_URL") {
                 sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             }
-        } catch(e) { console.log("Supabase se nepodařilo připojit, zapínám offline režim."); }
+        } catch(e) {}
 
-        let scena, kamera, renderer;
-        let lokalniKontejnerAvatar; 
-        let urovenObjekty = []; 
+        let scena, kamera, renderer, lokalniKontejnerAvatar;
+        let urovenObjekty = [];
         let animacniCas = 0;
 
-        // Fyzika 3D hráče
+        // Fyzikální model sjednocený pro obě zobrazení
         const hrac = {
-            x: 0, y: 4, z: 0,
-            rychlostX: 0, rychlostY: 0,
-            veVzduchu: false, sirka: 1.0, vyska: 2.0
+            x: 60, y: 350, sirka: 26, vyska: 26,
+            rychlostX: 0, rychlostY: 0, veVzduchu: false
         };
 
-        const gravitace = 0.24;
+        const gravitace = 0.5;
+        const treni = 0.8;
         const klavesy = {};
         let isMobile = false;
         const touchStav = { left: false, right: false, jump: false };
 
-        // Inicializace kompletní 3D grafiky
+        // DETEKCE PODPORY 3D GRAPHICS (WEBGL)
+        function detekujWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+            } catch (e) { return false; }
+        }
+
         function init3D() {
             const container = document.getElementById('gameCanvas');
-            
             scena = new THREE.Scene();
             scena.background = new THREE.Color(0x0d0e12);
-            scena.fog = new THREE.FogExp2(0x0d0e12, 0.015);
-
             kamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
             
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimalizace pro slabší mobily
             container.appendChild(renderer.domElement);
 
-            // Nastavení světla
-            const ambientniSvetlo = new THREE.AmbientLight(0xffffff, 0.7);
-            scena.add(ambientniSvetlo);
-
-            const slunce = new THREE.DirectionalLight(0xffffff, 0.8);
-            slunce.position.set(10, 25, 15);
-            scena.add(slunce);
-
-            // Generování vizuálního avatara
-            lokalniKontejnerAvatar = vytvorHezkehoAvatara(mojeBarva);
+            scena.add(new THREE.AmbientLight(0xffffff, 0.8));
+            lokalniKontejnerAvatar = vytvorHezkehoAvatara(parseInt(mojeBarvaHex.replace("#", "0x")));
             scena.add(lokalniKontejnerAvatar);
-
-            window.addEventListener('resize', onWindowResize);
         }
 
-        // Tvorba voxelového 3D avatara
         function vytvorHezkehoAvatara(barvaHex) {
             const kontejner = new THREE.Group();
-
             const matTelo = new THREE.MeshBasicMaterial({ color: barvaHex });
-            const matKuzg = new THREE.MeshBasicMaterial({ color: 0xffdbac }); 
-            const matObleceni = new THREE.MeshBasicMaterial({ color: 0x1f2937 });
+            const matKuzg = new THREE.MeshBasicMaterial({ color: 0xffdbac });
+            
+            const mTelo = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.1, 0.5), matTelo);
+            mTelo.position.y = 1.05; kontejner.add(mTelo);
+            
+            const mHlava = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), matKuzg);
+            mHlava.position.y = 1.9; kontejner.add(mHlava);
 
-            // Tělo
-            const gTelo = new THREE.BoxGeometry(0.9, 1.1, 0.5);
-            const mTelo = new THREE.Mesh(gTelo, matTelo);
-            mTelo.position.y = 1.05;
-            kontejner.add(mTelo);
+            const mNohaL = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.5, 0.3), new THREE.MeshBasicMaterial({ color: 0x1f2937 }));
+            mNohaL.position.set(-0.22, 0.25, 0); kontejner.add(mNohaL);
+            const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.22; kontejner.add(mNohaP);
 
-            // Hlava
-            const gHlava = new THREE.BoxGeometry(0.55, 0.55, 0.55);
-            const mHlava = new THREE.Mesh(gHlava, matKuzg);
-            mHlava.position.y = 1.9;
-            kontejner.add(mHlava);
-
-            // Vlasy / Čepice
-            const gVlasy = new THREE.BoxGeometry(0.58, 0.15, 0.58);
-            const mVlasy = new THREE.Mesh(gVlasy, matObleceni);
-            mVlasy.position.y = 2.2;
-            kontejner.add(mVlasy);
-
-            // Nohy
-            const gNoha = new THREE.BoxGeometry(0.3, 0.5, 0.35);
-            const mNohaL = new THREE.Mesh(gNoha, matObleceni);
-            mNohaL.position.set(-0.22, 0.25, 0);
-            kontejner.add(mNohaL);
-
-            const mNohaP = mNohaL.clone();
-            mNohaP.position.x = 0.22;
-            kontejner.add(mNohaP);
-
-            // Ruce
-            const gRuka = new THREE.BoxGeometry(0.25, 0.8, 0.25);
-            const mRukaL = new THREE.Mesh(gRuka, matTelo);
-            mRukaL.position.set(-0.6, 1.0, 0);
-            kontejner.add(mRukaL);
-
-            const mRukaP = mRukaL.clone();
-            mRukaP.position.x = 0.6;
-            kontejner.add(mRukaP);
-
-            kontejner.userData = { nohaL: mNohaL, nohaP: mNohaP, rukaL: mRukaL, rukaP: mRukaP };
+            kontejner.userData = { nohaL: mNohaL, nohaP: mNohaP };
             return kontejner;
         }
 
-        let aktualniLevelData = { platformy: [], lava: [], cil: {} };
+        // UNIVERZÁLNÍ GENERÁTOR TRASY (Využívají ho obě grafiky stejně)
+        function vygenerujLevelData(n) {
+            let platformy = [{ x: 0, y: 480, w: 140, h: 120 }];
+            let lava = [{ x: 140, y: 585, w: 920, h: 15 }];
+            const pocetSkoku = 6;
+            let aktX = 170; let aktY = 460;
 
-        // Sestavení herních platforem
+            for (let i = 1; i <= pocetSkoku; i++) {
+                const sirkaPlat = Math.max(45, 90 - (n * 0.4));
+                const rozestupX = 115 + ((Math.sin(n * i + i) + 1) * 12);
+                aktY += (Math.cos(n * i + 3) * 35);
+
+                if (aktY > 500) aktY = 490;
+                if (aktY < 230) aktY = 260;
+
+                platformy.push({ x: aktX, y: aktY, w: sirkaPlat, h: 16 });
+
+                if (n >= 10 && (n + i) % 3 === 0) {
+                    lava.push({ x: aktX + (sirkaPlat / 3), y: aktY - 6, w: sirkaPlat / 3, h: 6 });
+                }
+                aktX += sirkaPlat + rozestupX;
+            }
+            platformy.push({ x: 1060, y: 440, w: 140, h: 160 });
+            return { platformy, lava, cil: { x: 1110, y: 370, w: 40, h: 70 } };
+        }
+
         function sestav3DLevel(n) {
+            if (pouzit2DFallback) return;
             urovenObjekty.forEach(obj => scena.remove(obj));
             urovenObjekty = [];
-            aktualniLevelData = { platformy: [], lava: [], cil: {} };
+            const data = vygenerujLevelData(n);
 
-            const matPlatforma = new THREE.MeshBasicMaterial({ color: 0x252b36 });
-            const matLava = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-            const matCil = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.7 });
+            const matP = new THREE.MeshBasicMaterial({ color: 0x252b36 });
+            const matL = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 
-            // Startovní plocha
-            const gStart = new THREE.BoxGeometry(6, 3, 5);
-            const mStart = new THREE.Mesh(gStart, matPlatforma);
-            mStart.position.set(0, -1.5, 0);
-            scena.add(mStart);
-            urovenObjekty.push(mStart);
-            aktualniLevelData.platformy.push({ x: 0, y: 0, w: 6, h: 3 });
+            data.platformy.forEach(p => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(p.w / 10, p.h / 10, 3), matP);
+                mesh.position.set(p.x / 10, (600 - p.y) / 10, 0);
+                scena.add(mesh); urovenObjekty.push(mesh);
+            });
+            data.lava.forEach(l => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(l.w / 10, l.h / 10, 3), matL);
+                mesh.position.set(l.x / 10, (600 - l.y) / 10, 0);
+                scena.add(mesh); urovenObjekty.push(mesh);
+            });
+            const meshC = new THREE.Mesh(new THREE.BoxGeometry(data.cil.w / 10, data.cil.h / 10, 2), new THREE.MeshBasicMaterial({ color: 0x10b981 }));
+            meshC.position.set(data.cil.x / 10, (600 - data.cil.y) / 10, 0);
+            scena.add(meshC); urovenObjekty.push(meshC);
+        }
 
-            const pocetSkoku = 6;
-            let nastepX = 6;
-            let nastepY = 0;
-
-            for(let i=1; i<=pocetSkoku; i++) {
-                const sirkaKostky = Math.max(1.6, 3.5 - (n * 0.02));
-                const dalkaX = 4.2 + (Math.sin(n * i) * 0.5);
-                const posunY = Math.cos(n * i + 1) * 0.8;
-                nastepY += posunY;
-
-                if (nastepY > 2.5) nastepY = 2.5;
-                if (nastepY < -2.5) nastepY = -1;
-
-                nastepX += dalkaX;
-
-                const gPlat = new THREE.BoxGeometry(sirkaKostky, 0.8, 3);
-                const mPlat = new THREE.Mesh(gPlat, matPlatforma);
-                mPlat.position.set(nastepX, nastepY - 0.4, 0);
-                scena.add(mPlat);
-                urovenObjekty.push(mPlat);
-
-                aktualniLevelData.platformy.push({ x: nastepX, y: nastepY, w: sirkaKostky, h: 0.8 });
-
-                // Přidání lávových překážek od levelu 10
-                if (n >= 10 && (n + i) % 3 === 0) {
-                    const gSpike = new THREE.BoxGeometry(0.5, 0.5, 3);
-                    const mSpike = new THREE.Mesh(gSpike, matLava);
-                    mSpike.position.set(nastepX, nastepY + 0.2, 0);
-                    scena.add(mSpike);
-                    urovenObjekty.push(mSpike);
-                    aktualniLevelData.lava.push({ x: nastepX, y: nastepY + 0.45, w: 0.5, h: 0.5 });
+        async function startEngine() {
+            // ROZHODNUTÍ: 3D NEBO BEZPEČNÉ 2D
+            if (!detekujWebGL()) {
+                pouzit2DFallback = true;
+                document.getElementById('gameCanvas').style.display = 'none';
+                canvas2D.style.display = 'block';
+            } else {
+                try { init3D(); } catch(e) {
+                    pouzit2DFallback = true;
+                    document.getElementById('gameCanvas').style.display = 'none';
+                    canvas2D.style.display = 'block';
                 }
             }
 
-            // Konec
-            nastepX += 6;
-            const gKon = new THREE.BoxGeometry(5, 3, 5);
-            const mKon = new THREE.Mesh(gKon, matPlatforma);
-            mKon.position.set(nastepX, nastepY - 1.5, 0);
-            scena.add(mKon);
-            urovenObjekty.push(mKon);
-            aktualniLevelData.platformy.push({ x: nastepX, y: nastepY, w: 5, h: 3 });
-
-            // Velká láva dole pod celou mapou
-            const gMegaLava = new THREE.BoxGeometry(nastepX * 2.5, 1, 15);
-            const mMegaLava = new THREE.Mesh(gMegaLava, matLava);
-            mMegaLava.position.set(nastepX / 2, -8, 0);
-            scena.add(mMegaLava);
-            urovenObjekty.push(mMegaLava);
-            aktualniLevelData.lava.push({ x: nastepX / 2, y: -7.5, w: nastepX * 2.5, h: 1 });
-
-            // Brána
-            const gBrana = new THREE.BoxGeometry(1.2, 2.5, 2.5);
-            const mBrana = new THREE.Mesh(gBrana, matCil);
-            mBrana.position.set(nastepX, nastepY + 1.25, 0);
-            scena.add(mBrana);
-            urovenObjekty.push(mBrana);
-            aktualniLevelData.cil = { x: nastepX, y: nastepY, w: 1.2, h: 2.5 };
-        }
-
-        // Start celého enginu
-        async function startEngine() {
-            init3D();
-            
-            // Konfigurace ovladačů mobil / PC
             isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
             if (isMobile) {
                 document.getElementById('mobileControls').style.display = 'flex';
                 const bindTouch = (id, klic) => {
                     const el = document.getElementById(id);
-                    if(el) {
+                    if(el){
                         el.addEventListener('touchstart', (e) => { e.preventDefault(); touchStav[klic] = true; });
                         el.addEventListener('touchend', (e) => { e.preventDefault(); touchStav[klic] = false; });
                     }
@@ -341,179 +291,106 @@
 
             sestav3DLevel(mujLevel);
 
-            if (!sb) { loop(); return; }
-
-            try {
-                const { data: gData } = await sb.from('games').select('name').ilike('url_path', '%obby-hra%').maybeSingle();
-                let jmenoHry = gData ? gData.name : "3D Mega Obby";
-                document.getElementById('dynamicGameName').innerText = jmenoHry;
-
-                const { data: { user } } = await sb.auth.getUser();
-                if (user) {
-                    mojeId = user.id;
-                    mujUsername = user.user_metadata.display_name || user.email;
-                    await sb.from('online_players').update({ current_game: jmenoHry, updated_at: new Date().toISOString() }).eq('id', mojeId);
-
-                    mmoKanal = sb.channel('obby_3d_room', { config: { broadcast: { self: false } } });
-                    mmoKanal.on('broadcast', { event: 'tick' }, payload => {
-                        const d = payload.payload;
-                        if (!vzdaleniHraci[d.id]) {
-                            const novy3DAvatar = vytvorHezkehoAvatara(d.color);
-                            scena.add(novy3DAvatar);
-                            vzdaleniHraci[d.id] = { obj: novy3DAvatar };
-                        }
-                        const v = vzdaleniHraci[d.id];
-                        v.username = d.username; v.x = d.x; v.y = d.y; v.level = d.level;
-                        v.rychlostX = d.rychlostX; v.tickTime = Date.now();
-                    }).subscribe();
-
-                    setInterval(() => {
-                        if (mmoKanal) {
-                            mmoKanal.send({
-                                type: 'broadcast', event: 'tick',
-                                payload: { id: mojeId, username: mujUsername, x: hrac.x, y: hrac.y, color: mojeBarva, level: mujLevel, rychlostX: hrac.rychlostX }
-                            });
-                        }
-                    }, 30);
-                }
-            } catch(e) { console.log("Chyba synchronizace uživatele, pokračuji v lokálním režimu."); }
-
+            if (sb) {
+                try {
+                    const { data: gData } = await sb.from('games').select('name').ilike('url_path', '%obby-hra%').maybeSingle();
+                    if(gData) document.getElementById('dynamicGameName').innerText = gData.name;
+                    const { data: { user } } = await sb.auth.getUser();
+                    if (user) {
+                        mojeId = user.id; mujUsername = user.user_metadata.display_name || user.email;
+                        mmoKanal = sb.channel('obby_universal_room').on('broadcast', { event: 'tick' }, payload => {
+                            const d = payload.payload;
+                            if (!vzdaleniHraci[d.id] && !pouzit2DFallback) {
+                                const av = vytvorHezkehoAvatara(parseInt(d.color.replace("#", "0x")));
+                                scena.add(av); vzdaleniHraci[d.id] = { obj: av };
+                            } else if (!vzdaleniHraci[d.id]) { vzdaleniHraci[d.id] = {}; }
+                            const v = vzdaleniHraci[d.id];
+                            v.username = d.username; v.x = d.x; v.y = d.y; v.level = d.level; v.color = d.color; v.tickTime = Date.now();
+                        }).subscribe();
+                        setInterval(() => { if(mmoKanal) mmoKanal.send({ type: 'broadcast', event: 'tick', payload: { id: mojeId, username: mujUsername, x: hrac.x, y: hrac.y, color: mojeBarvaHex, level: mujLevel } }); }, 30);
+                    }
+                } catch(e){}
+            }
             loop();
         }
 
-        // Hlavní smyčka vykreslování (Fyzika, Animace a Kamera)
         function loop() {
             requestAnimationFrame(loop);
+            const lvlData = vygenerujLevelData(mujLevel);
 
-            // Výpočet pohybu X
-            if (klavesy['ArrowRight'] || klavesy['KeyD'] || touchStav.right) {
-                hrac.rychlostX = 0.13;
-                lokalniKontejnerAvatar.rotation.y = Math.PI / 2;
-            } else if (klavesy['ArrowLeft'] || klavesy['KeyA'] || touchStav.left) {
-                hrac.rychlostX = -0.13;
-                lokalniKontejnerAvatar.rotation.y = -Math.PI / 2;
-            } else {
-                hrac.rychlostX *= 0.75;
-            }
+            if (klavesy['ArrowRight'] || klavesy['KeyD'] || touchStav.right) hrac.rychlostX = 4.2;
+            else if (klavesy['ArrowLeft'] || klavesy['KeyA'] || touchStav.left) hrac.rychlostX = -4.2;
+            else hrac.rychlostX *= treni;
 
-            // Výpočet skoku Y
             if ((klavesy['ArrowUp'] || klavesy['Space'] || klavesy['KeyW'] || touchStav.jump) && !hrac.veVzduchu) {
-                hrac.rychlostY = 3.8;
-                hrac.veVzduchu = true;
+                hrac.rychlostY = -10.2; hrac.veVzduchu = true;
             }
-
-            hrac.rychlostY -= gravitace * 0.16;
-            hrac.x += hrac.rychlostX;
-            hrac.y += hrac.rychlostY;
-
-            // Logika 3D kolizí
+            hrac.rychlostY += gravitace; hrac.x += hrac.rychlostX; hrac.y += hrac.rychlostY;
             hrac.veVzduchu = true;
-            aktualniLevelData.platformy.forEach(p => {
-                if (hrac.x + hrac.sirka/2 > p.x - p.w/2 && hrac.x - hrac.sirka/2 < p.x + p.w/2) {
-                    if (hrac.y >= p.y && hrac.y + hrac.rychlostY <= p.y + 0.15 && hrac.rychlostY <= 0) {
-                        hrac.rychlostY = 0;
-                        hrac.y = p.y;
-                        hrac.veVzduchu = false;
-                    }
+
+            lvlData.platformy.forEach(p => {
+                if (hrac.x < p.x + p.w && hrac.x + hrac.sirka > p.x && hrac.y + hrac.vyska > p.y && hrac.y < p.y + p.h) {
+                    if (hrac.rychlostY > 0) { hrac.rychlostY = 0; hrac.y = p.y - hrac.vyska; hrac.veVzduchu = false; }
                 }
             });
-
-            // Kolize s lávou
-            aktualniLevelData.lava.forEach(l => {
-                if (hrac.x + hrac.sirka/2 > l.x - l.w/2 && hrac.x - hrac.sirka/2 < l.x + l.w/2) {
-                    if (hrac.y <= l.y && hrac.y >= l.y - 0.7) restartHry();
-                }
+            lvlData.lava.forEach(l => {
+                if (hrac.x < l.x + l.w && hrac.x + hrac.sirka > l.x && hrac.y + hrac.vyska > l.y && hrac.y < l.y + l.h) restartHry();
             });
-
-            // Kolize s cílovou bránou
-            const c = aktualniLevelData.cil;
-            if (c && hrac.x + hrac.sirka/2 > c.x - c.w/2 && hrac.x - hrac.sirka/2 < c.x + c.w/2) {
-                if (hrac.y >= c.y && hrac.y <= c.y + c.h) {
-                    if (mujLevel < 100) {
-                        mujLevel++;
-                        document.getElementById('levelDisplay').innerText = `Level ${mujLevel} / 100`;
-                        sestav3DLevel(mujLevel);
-                        restartHry();
-                    } else {
-                        alert("👑 Ovládl jsi celé 3D MMO Obby!");
-                        mujLevel = 1; sestav3DLevel(mujLevel); restartHry();
-                    }
-                }
+            if (hrac.x < lvlData.cil.x + lvlData.cil.w && hrac.x + hrac.sirka > lvlData.cil.x && hrac.y + hrac.vyska > lvlData.cil.y && hrac.y < lvlData.cil.y + lvlData.cil.h) {
+                if (mujLevel < 100) { mujLevel++; document.getElementById('levelDisplay').innerText = `Level ${mujLevel} / 100`; sestav3DLevel(mujLevel); restartHry(); }
             }
+            if (hrac.y > 600) restartHry();
 
-            if (hrac.y < -6) restartHry();
+            // RENDER SYSTÉM
+            if (pouzit2DFallback) {
+                // SPUŠTĚN NOUZOVÝ 2D REŽIM
+                canvas2D.width = window.innerWidth; canvas2D.height = window.innerHeight;
+                ctx2D.clearRect(0,0,canvas2D.width,canvas2D.height);
+                ctx2D.save(); ctx2D.scale(canvas2D.width / 1200, canvas2D.height / 600);
 
-            // Pozice lokálního avatara
-            lokalniKontejnerAvatar.position.set(hrac.x, hrac.y, hrac.z);
+                ctx2D.fillStyle = '#252b36'; lvlData.platformy.forEach(p => ctx2D.fillRect(p.x, p.y, p.w, p.h));
+                ctx2D.fillStyle = '#ef4444'; lvlData.lava.forEach(l => ctx2D.fillRect(l.x, l.y, l.w, l.h));
+                ctx2D.fillStyle = '#10b981'; ctx2D.fillRect(lvlData.cil.x, lvlData.cil.y, lvlData.cil.w, lvlData.cil.h);
 
-            // Animace chůze končetin
-            if (Math.abs(hrac.rychlostX) > 0.01 && !hrac.veVzduchu) {
-                animacniCas += 0.22;
-                lokalniKontejnerAvatar.userData.nohaL.rotation.z = Math.sin(animacniCas) * 0.6;
-                lokalniKontejnerAvatar.userData.nohaP.rotation.z = -Math.sin(animacniCas) * 0.6;
-                lokalniKontejnerAvatar.userData.rukaL.rotation.z = -Math.sin(animacniCas) * 0.4;
-                lokalniKontejnerAvatar.userData.rukaP.rotation.z = Math.sin(animacniCas) * 0.4;
+                const ted = Date.now();
+                for (let id in vzdaleniHraci) {
+                    const v = vzdaleniHraci[id];
+                    if (ted - v.tickTime < 3000 && v.level === mujLevel) {
+                        ctx2D.fillStyle = v.color; ctx2D.fillRect(v.x, v.y, hrac.sirka, hrac.vyska);
+                        ctx2D.fillStyle = 'rgba(255,255,255,0.6)'; ctx2D.font = '10px Inter'; ctx2D.fillText(v.username, v.x - 5, v.y - 6);
+                    }
+                }
+                ctx2D.fillStyle = mojeBarvaHex; ctx2D.fillRect(hrac.x, hrac.y, hrac.sirka, hrac.vyska);
+                ctx2D.fillStyle = '#fff'; ctx2D.font = 'bold 11px Inter'; ctx2D.fillText(mujUsername, hrac.x - 5, hrac.y - 6);
+                ctx2D.restore();
             } else {
-                lokalniKontejnerAvatar.userData.nohaL.rotation.z = 0;
-                lokalniKontejnerAvatar.userData.nohaP.rotation.z = 0;
-                lokalniKontejnerAvatar.userData.rukaL.rotation.z = 0;
-                lokalniKontejnerAvatar.userData.rukaP.rotation.z = 0;
-            }
-
-            // Filtrování a správa multiplayeru
-            const nyni = Date.now();
-            for (let id in vzdaleniHraci) {
-                const v = vzdaleniHraci[id];
-                if (nyni - v.tickTime > 3000) {
-                    scena.remove(v.obj);
-                    delete vzdaleniHraci[id];
-                    continue;
+                // FUNKČNÍ 3D REŽIM
+                lokalniKontejnerAvatar.position.set(hrac.x / 10, (600 - hrac.y) / 10, 0);
+                if (Math.abs(hrac.rychlostX) > 0.1) {
+                    animacniCas += 0.2;
+                    lokalniKontejnerAvatar.userData.nohaL.rotation.z = Math.sin(animacniCas) * 0.5;
+                    lokalniKontejnerAvatar.userData.nohaP.rotation.z = -Math.sin(animacniCas) * 0.5;
                 }
-
-                // Izolace levelů
-                if (v.level === mujLevel) {
-                    v.obj.visible = true;
-                    v.obj.position.set(v.x, v.y, 0);
-                    if (Math.abs(v.rychlostX) > 0.01) {
-                        v.obj.rotation.y = v.rychlostX > 0 ? Math.PI / 2 : -Math.PI / 2;
-                        v.obj.userData.nohaL.rotation.z = Math.sin(nyni * 0.01) * 0.6;
-                        v.obj.userData.nohaP.rotation.z = -Math.sin(nyni * 0.01) * 0.6;
+                const ted = Date.now();
+                for (let id in vzdaleniHraci) {
+                    const v = vzdaleniHraci[id];
+                    if (v.obj) {
+                        if (ted - v.tickTime < 3000 && v.level === mujLevel) {
+                            v.obj.visible = true; v.obj.position.set(v.x / 10, (600 - v.y) / 10, 0);
+                        } else { v.obj.visible = false; }
                     }
-                } else {
-                    v.obj.visible = false;
                 }
+                kamera.position.set(hrac.x / 10, ((600 - hrac.y) / 10) + 2, 9);
+                kamera.lookAt(hrac.x / 10, (600 - hrac.y) / 10, 0);
+                renderer.render(scena, kamera);
             }
-
-            // Hladký pohyb kamery za hráčem
-            kamera.position.set(hrac.x, hrac.y + 2.5, hrac.z + 9.5);
-            kamera.lookAt(hrac.x, hrac.y + 0.8, hrac.z);
-
-            renderer.render(scena, kamera);
         }
 
-        function restartHry() {
-            hrac.x = 0; hrac.y = 3; hrac.rychlostX = 0; hrac.rychlostY = 0;
-        }
-
-        function onWindowResize() {
-            kamera.aspect = window.innerWidth / window.innerHeight;
-            kamera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        async function vratSeDoLobby() {
-            if (sb && mojeId) {
-                try {
-                    await sb.from('online_players').update({ current_game: 'Lobby', updated_at: new Date().toISOString() }).eq('id', mojeId);
-                } catch(e){}
-            }
-            window.location.href = '../index.html';
-        }
-
-        // Spuštění hry
-        window.onload = () => {
-            startEngine();
-        };
+        function restartHry() { hrac.x = 60; hrac.y = 300; hrac.rychlostX = 0; hrac.rychlostY = 0; }
+        window.addEventListener('resize', () => { if(!pouzit2DFallback && kamera) { kamera.aspect = window.innerWidth / window.innerHeight; kamera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); } });
+        async function vratSeDoLobby() { if(sb && mojeId){ try{ await sb.from('online_players').update({ current_game: 'Lobby' }).eq('id', mojeId); }catch(e){} } window.location.href = '../index.html'; }
+        
+        window.onload = startEngine;
     </script>
 </body>
 </html>
