@@ -240,19 +240,19 @@
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
 
-        let supabase = null;
+        let sb = null; // Přejmenováno z 'supabase', aby nedocházelo ke kolizi s CDN knihovnou
         let isLoginMode = true;
         let mojeId = null;
         let mujUsername = "";
         let chatKanal = null;
 
-        // Ochrana startu: Inicializujeme SDK pouze v případě, že řetězce byly upraveny
+        // Bezpečná inicializace klienta
         try {
             if (SUPABASE_URL !== "TVOJE_SUPABASE_URL" && SUPABASE_KEY !== "TVŮJ_ANON_KEY") {
-                supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             }
         } catch (e) {
-            console.error("Kritická chyba inicializace Supabase knihovny:", e);
+            console.error("Chyba inicializace:", e);
         }
 
         // Propojení DOM prvků
@@ -261,7 +261,7 @@
         const authTitle = document.getElementById('authTitle');
         const authBtn = document.getElementById('authBtn');
 
-        // 1. PŘEPÍNÁNÍ REŽIMŮ (Zaregistruj se <-> Přihlas se) - Funguje 100% nezávisle na síti
+        // Přepínání registračního a přihlašovacího formuláře
         switchMode.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
@@ -277,10 +277,10 @@
             }
         });
 
-        // 2. LOGIKA TLAČÍTKA AUTH (Zpracování registrací a přihlášení)
+        // Odeslání formuláře
         authBtn.addEventListener('click', async () => {
-            if (!supabase) {
-                alert("Zásek odvrácen: Nemáš nastavené API klíče ze Supabase na řádku 179 a 180!");
+            if (!sb) {
+                alert("Pozor! Nejsou správně nastavené API klíče ze Supabase na řádku 179 a 180!");
                 return;
             }
 
@@ -289,50 +289,50 @@
             const username = document.getElementById('username').value.trim();
 
             if (!email || !password) {
-                alert("Chybí povinná pole: Vyplň e-mail a heslo.");
+                alert("Vyplň e-mail a heslo.");
                 return;
             }
 
             if (isLoginMode) {
-                // Přihlašování
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) alert("Přihlášení selhalo: " + error.message);
+                // Přihlášení
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) alert("Chyba přihlášení: " + error.message);
                 else checkUser();
             } else {
-                // Registrace nového účtu
-                if (!username) { alert("Chyba: Zadej uživatelské jméno pro svůj avatar profil!"); return; }
+                // Registrace
+                if (!username) { alert("Zadej uživatelské jméno!"); return; }
                 
-                const { data, error } = await supabase.auth.signUp({
+                const { data, error } = await sb.auth.signUp({
                     email,
                     password,
                     options: { data: { display_name: username } }
                 });
 
                 if (error) {
-                    alert("Registrace odmítnuta databází: " + error.message);
+                    alert("Chyba registrace: " + error.message);
                 } else {
-                    alert("Účet vytvořen úspěšně! Nyní zadej údaje do přihlašovacího okna.");
-                    switchMode.click(); // Přepne okno na přihlášení
+                    alert("Účet vytvořen! Nyní se zkus přihlásit.");
+                    switchMode.click();
                 }
             }
         });
 
-        // 3. KONTROLA AKTIVNÍ SESSION PO REFRESHI NEBO PŘIHLÁŠENÍ
+        // Kontrola aktivního přihlášení
         async function checkUser() {
-            if (!supabase) return;
-            const { data: { user }, error } = await supabase.auth.getUser();
+            if (!sb) return;
+            const { data: { user }, error } = await sb.auth.getUser();
 
             if (user && !error) {
                 mojeId = user.id;
                 mujUsername = user.user_metadata.display_name || user.email;
                 document.getElementById('userDisplay').innerText = mujUsername;
 
-                // SPA Překlopení obrazovek
+                // Přepnutí obrazovek do Lobby
                 document.getElementById('authPage').classList.remove('active');
                 document.getElementById('clientPage').classList.add('active');
 
-                // Zápis stavu do veřejného registru online hráčů
-                await supabase.from('online_players').upsert({
+                // Zápis do online_players databáze
+                await sb.from('online_players').upsert({
                     id: mojeId, username: mujUsername, email: user.email, current_game: 'Lobby', updated_at: new Date().toISOString()
                 });
 
@@ -340,10 +340,10 @@
             }
         }
 
-        // 4. NAČTENÍ DAT PO VSTUPU DO LOBBY
+        // Načtení dat po přihlášení do lobby
         async function nactiKlientskaData() {
-            // Načtení her z DB
-            const { data: hry } = await supabase.from('games').select('*');
+            // Načtení her
+            const { data: hry } = await sb.from('games').select('*');
             const gGrid = document.getElementById('gamesGrid');
             const fGrid = document.getElementById('feedGrid');
             
@@ -353,15 +353,15 @@
                 hry.forEach((h, index) => {
                     const cardHtml = `<div class="game-card"><div class="game-thumbnail">${h.emoji}</div><div class="game-info"><div class="game-name">${h.name}</div></div></div>`;
                     gGrid.innerHTML += cardHtml;
-                    if (index < 2) fGrid.innerHTML += cardHtml; // První dvě dáme do doporučených
+                    if (index < 2) fGrid.innerHTML += cardHtml;
                 });
             } else {
-                gGrid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Katalog her je prázdný.</p>";
+                gGrid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádné hry v katalogu.</p>";
                 fGrid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádná doporučení.</p>";
             }
 
-            // Aktivace globálního real-time chatu přes Supabase Broadcast
-            chatKanal = supabase.channel('lobby_global', { config: { broadcast: { self: true } } });
+            // Spuštění Realtime chatu přes Broadcast kanál
+            chatKanal = sb.channel('lobby_global', { config: { broadcast: { self: true } } });
             chatKanal.on('broadcast', { event: 'shout' }, payload => {
                 const msgBox = document.getElementById('chatMessages');
                 const div = document.createElement('div');
@@ -372,7 +372,7 @@
             }).subscribe();
         }
 
-        // 5. ODESÍLÁNÍ CHAT ZPRÁV
+        // Odeslání zprávy v chatu
         document.getElementById('chatSendBtn').addEventListener('click', () => {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
@@ -382,15 +382,15 @@
             }
         });
 
-        // 6. ODHLÁŠENÍ ZE SYSTÉMU
+        // Odhlášení
         document.getElementById('logoutBtn').addEventListener('click', async () => {
-            if (mojeId && supabase) await supabase.from('online_players').delete().eq('id', mojeId);
+            if (mojeId && sb) await sb.from('online_players').delete().eq('id', mojeId);
             if (chatKanal) chatKanal.unsubscribe();
-            if (supabase) await supabase.auth.signOut();
+            if (sb) await sb.auth.signOut();
             window.location.reload();
         });
 
-        // Spuštění kontroly na pozadí při startu webu
+        // Spuštění automatické kontroly přihlášení
         checkUser();
     </script>
 </body>
