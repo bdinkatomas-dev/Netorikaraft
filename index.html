@@ -26,7 +26,6 @@
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -35,7 +34,7 @@
             overflow-x: hidden;
         }
 
-        /* SPA Systém přepínání obrazovek */
+        /* SPA Přepínání obrazovek */
         .page { display: none; }
         .page.active { display: block; }
 
@@ -62,7 +61,6 @@
             font-size: 2rem;
             margin-bottom: 8px;
             font-weight: 700;
-            letter-spacing: -1px;
         }
 
         .auth-card p {
@@ -84,7 +82,6 @@
             border-radius: 8px;
             color: var(--text-main);
             font-size: 0.95rem;
-            transition: all 0.2s;
         }
 
         input:focus { outline: none; border-color: var(--accent); }
@@ -124,7 +121,7 @@
             z-index: 100;
         }
 
-        .logo { font-weight: 700; font-size: 1.4rem; letter-spacing: -0.5px; }
+        .logo { font-weight: 700; font-size: 1.4rem; }
 
         .user-badge {
             font-size: 0.9rem;
@@ -150,43 +147,26 @@
             .main-content { grid-template-columns: 1fr; }
         }
 
-        .search-box { margin-bottom: 24px; }
-        .search-box input { font-size: 1.1rem; padding: 16px 20px; border-radius: 12px; }
-
-        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-
         .panel-block { background: var(--bg-card); padding: 20px; border-radius: 12px; margin-bottom: 24px; }
+        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; }
 
-        /* Gridy a Listy */
         .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
-        .friends-list, .search-players-list { display: flex; flex-direction: column; gap: 10px; }
-
-        @media (max-width: 480px) {
-            .games-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
-        }
-
-        /* Herní karta */
-        .game-card { background: #1e222b; border-radius: 12px; overflow: hidden; transition: transform 0.2s; cursor: pointer; display: flex; flex-direction: column; }
+        .game-card { background: #1e222b; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.2s; }
         .game-card:hover { transform: translateY(-4px); }
         .game-thumbnail { width: 100%; aspect-ratio: 1/1; background: #262b37; display: flex; justify-content: center; align-items: center; font-size: 2.3rem; }
         .game-info { padding: 10px; }
-        .game-name { font-size: 0.9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .game-author { font-size: 0.75rem; color: var(--text-muted); }
+        .game-name { font-size: 0.9rem; font-weight: 600; }
 
-        /* Karta uživatele / přítele */
-        .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 14px; border-radius: 8px; }
-        .user-item-name { font-size: 0.9rem; font-weight: 600; }
-        .user-item-status { font-size: 0.75rem; color: var(--text-muted); }
+        .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
         .sm-btn { width: auto; padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; }
 
-        /* Lobby chat */
-        .chat-container { display: flex; flex-direction: column; height: 350px; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
+        /* Realtime Chat */
+        .chat-container { display: flex; flex-direction: column; height: 320px; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
         .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
-        .chat-msg { background: var(--bg-input); padding: 8px 12px; border-radius: 8px; word-break: break-word; }
+        .chat-msg { background: var(--bg-input); padding: 8px 12px; border-radius: 8px; }
         .chat-msg-user { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
         .chat-input-area { display: flex; gap: 8px; padding: 12px; background: #12141a; }
-        .chat-input-area input { padding: 10px; border-radius: 6px; margin: 0; }
-        .chat-input-area button { width: auto; padding: 0 16px; border-radius: 6px; }
+        .chat-input-area input { padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -202,7 +182,7 @@
                 <div class="form-group"><input type="password" id="password" placeholder="Heslo (min. 6 znaků)"></div>
                 
                 <button id="authBtn">Přihlásit se</button>
-                <div class="switch-auth" id="switchAuth">Nemáš účet? <span>Zaregistruj se</span></div>
+                <div class="switch-auth" id="switchMode">Nemáš účet? <span>Zaregistruj se</span></div>
             </div>
         </div>
     </div>
@@ -218,17 +198,12 @@
 
         <main class="main-content">
             <div>
-                <div class="search-box">
-                    <input type="text" id="searchBar" placeholder="Hledej hry, obby, tycoony...">
-                </div>
-
                 <div class="panel-block">
-                    <h2 class="section-title">✨ Doporučeno pro tebe (Denní Feed)</h2>
+                    <h2 class="section-title">✨ Doporučeno pro tebe</h2>
                     <div class="games-grid" id="feedGrid"></div>
                 </div>
-
                 <div class="panel-block">
-                    <h2 class="section-title">🌐 Všechny hry (Discover)</h2>
+                    <h2 class="section-title">🌐 Všechny dostupné hry</h2>
                     <div class="games-grid" id="gamesGrid"></div>
                 </div>
             </div>
@@ -236,24 +211,24 @@
             <div>
                 <div class="panel-block">
                     <h2 class="section-title">👥 Přátelé online</h2>
-                    <div class="friends-list" id="friendsList"></div>
+                    <div id="friendsList"></div>
                 </div>
 
                 <div class="panel-block">
-                    <h2 class="section-title">🔍 Najít hráče</h2>
+                    <h2 class="section-title">🔍 Vyhledat hráče</h2>
                     <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <input type="text" id="searchPlayerInput" placeholder="Jméno hráče..." style="padding: 8px 12px; font-size: 0.85rem;">
+                        <input type="text" id="searchPlayerInput" placeholder="Uživatelské jméno...">
                         <button id="searchPlayerBtn" class="sm-btn" style="background:var(--accent);">Hledat</button>
                     </div>
-                    <div class="search-players-list" id="playerSearchResults"></div>
+                    <div id="playerSearchResults"></div>
                 </div>
 
                 <h2 class="section-title">💬 Globální Lobby Chat</h2>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
-                        <input type="text" id="chatInput" placeholder="Napiš zprávu...">
-                        <button id="chatSendBtn">Poslat</button>
+                        <input type="text" id="chatInput" placeholder="Napiš zprávu v lobby...">
+                        <button id="chatSendBtn" style="width: auto; padding: 0 16px;">Poslat</button>
                     </div>
                 </div>
             </div>
@@ -261,245 +236,161 @@
     </div>
 
     <script>
-        // Nastavení konfigurace tvého projektu ze Supabase
+        // --- !!! SEM VLOŽ SVÉ ÚDAJE ZE SUPABASE ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let supabase = null;
         let isLoginMode = true;
         let mojeId = null;
         let mujUsername = "";
         let chatKanal = null;
 
-        // Načtení UI prvků
-        const authPage = document.getElementById('authPage');
-        const clientPage = document.getElementById('clientPage');
-        const authTitle = document.getElementById('authTitle');
-        const authDesc = document.getElementById('authDesc');
-        const usernameGroup = document.getElementById('usernameGroup');
-        const authBtn = document.getElementById('authBtn');
-        const switchAuth = document.getElementById('switchAuth');
-        const gamesGrid = document.getElementById('gamesGrid');
-        const feedGrid = document.getElementById('feedGrid');
-        const friendsList = document.getElementById('friendsList');
-        const searchPlayerInput = document.getElementById('searchPlayerInput');
-        const searchPlayerBtn = document.getElementById('searchPlayerBtn');
-        const playerSearchResults = document.getElementById('playerSearchResults');
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const chatSendBtn = document.getElementById('chatSendBtn');
-        const searchBar = document.getElementById('searchBar');
-        const userDisplay = document.getElementById('userDisplay');
+        // Ochrana startu: Inicializujeme SDK pouze v případě, že řetězce byly upraveny
+        try {
+            if (SUPABASE_URL !== "TVOJE_SUPABASE_URL" && SUPABASE_KEY !== "TVŮJ_ANON_KEY") {
+                supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch (e) {
+            console.error("Kritická chyba inicializace Supabase knihovny:", e);
+        }
 
-        // Přepínání mezi LOGIN a REGISTER režimem tlačítek
-        switchAuth.addEventListener('click', () => {
+        // Propojení DOM prvků
+        const switchMode = document.getElementById('switchMode');
+        const usernameGroup = document.getElementById('usernameGroup');
+        const authTitle = document.getElementById('authTitle');
+        const authBtn = document.getElementById('authBtn');
+
+        // 1. PŘEPÍNÁNÍ REŽIMŮ (Zaregistruj se <-> Přihlas se) - Funguje 100% nezávisle na síti
+        switchMode.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
-                authTitle.innerText = "Netorikaraft"; authDesc.innerText = "Vítej v kreativním herním světě";
-                usernameGroup.style.display = "none"; authBtn.innerText = "Přihlásit se";
-                switchAuth.innerHTML = "Nemáš účet? <span>Zaregistruj se</span>";
+                authTitle.innerText = "Netorikaraft";
+                usernameGroup.style.display = "none";
+                authBtn.innerText = "Přihlásit se";
+                switchMode.innerHTML = "Nemáš účet? <span>Zaregistruj se</span>";
             } else {
-                authTitle.innerText = "Registrace"; authDesc.innerText = "Vytvoř si nový herní účet";
-                usernameGroup.style.display = "block"; authBtn.innerText = "Zaregistrovat se";
-                switchAuth.innerHTML = "Už máš účet? <span>Přihlas se</span>";
+                authTitle.innerText = "Registrace";
+                usernameGroup.style.display = "block";
+                authBtn.innerText = "Zaregistrovat se";
+                switchMode.innerHTML = "Už máš účet? <span>Přihlas se</span>";
             }
         });
 
-        // Odeslání formuláře (Přihlášení / Registrace)
+        // 2. LOGIKA TLAČÍTKA AUTH (Zpracování registrací a přihlášení)
         authBtn.addEventListener('click', async () => {
+            if (!supabase) {
+                alert("Zásek odvrácen: Nemáš nastavené API klíče ze Supabase na řádku 179 a 180!");
+                return;
+            }
+
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const username = document.getElementById('username').value.trim();
 
             if (!email || !password) {
-                alert("Vyplň e-mail a heslo!");
+                alert("Chybí povinná pole: Vyplň e-mail a heslo.");
                 return;
             }
 
             if (isLoginMode) {
-                // PŘIHLÁŠENÍ
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) alert("Chyba přihlášení: " + error.message); 
+                // Přihlašování
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error) alert("Přihlášení selhalo: " + error.message);
                 else checkUser();
             } else {
-                // REGISTRACE
-                if (!username) { alert("Zadej uživatelské jméno!"); return; }
-                const { error } = await supabase.auth.signUp({ 
-                    email, 
-                    password, 
-                    options: { data: { display_name: username } } 
+                // Registrace nového účtu
+                if (!username) { alert("Chyba: Zadej uživatelské jméno pro svůj avatar profil!"); return; }
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { display_name: username } }
                 });
+
                 if (error) {
-                    alert("Chyba registrace: " + error.message);
+                    alert("Registrace odmítnuta databází: " + error.message);
                 } else {
-                    alert("Účet úspěšně vytvořen! Nyní se zkus přihlásit.");
-                    switchAuth.click(); // Přepne vizuál na přihlášení
+                    alert("Účet vytvořen úspěšně! Nyní zadej údaje do přihlašovacího okna.");
+                    switchMode.click(); // Přepne okno na přihlášení
                 }
             }
         });
 
-        // Odhlášení
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            if (mojeId) await supabase.from('online_players').delete().eq('id', mojeId);
-            if (chatKanal) chatKanal.unsubscribe();
-            await supabase.auth.signOut();
-            showPage('authPage');
-        });
-
-        function showPage(p) { authPage.classList.remove('active'); clientPage.classList.remove('active'); document.getElementById(p).classList.add('active'); }
-
-        // Kontrola stavu uživatele na pozadí (Základní pilíř SPA systému)
+        // 3. KONTROLA AKTIVNÍ SESSION PO REFRESHI NEBO PŘIHLÁŠENÍ
         async function checkUser() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
+            if (!supabase) return;
+            const { data: { user }, error } = await supabase.auth.getUser();
+
+            if (user && !error) {
                 mojeId = user.id;
                 mujUsername = user.user_metadata.display_name || user.email;
-                userDisplay.innerText = mujUsername;
-                showPage('clientPage');
-                
-                // Zápis do databáze, že jsme aktivní v Lobby
+                document.getElementById('userDisplay').innerText = mujUsername;
+
+                // SPA Překlopení obrazovek
+                document.getElementById('authPage').classList.remove('active');
+                document.getElementById('clientPage').classList.add('active');
+
+                // Zápis stavu do veřejného registru online hráčů
                 await supabase.from('online_players').upsert({
                     id: mojeId, username: mujUsername, email: user.email, current_game: 'Lobby', updated_at: new Date().toISOString()
                 });
 
-                // Načtení dat do dashboardu
-                nactiHryAFeed();
-                nactiPratele();
-                spustRealtimeChat();
-
-                // Pravidelná smyčka pro aktualizaci online přátel
-                setInterval(nactiPratele, 6000);
-            } else { 
-                showPage('authPage'); 
+                nactiKlientskaData();
             }
         }
 
-        // Algoritmus pro promíchání pole (Fisher-Yates Shuffle)
-        function promichej(pole) {
-            for (let i = pole.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [pole[i], pole[j]] = [pole[j], pole[i]];
+        // 4. NAČTENÍ DAT PO VSTUPU DO LOBBY
+        async function nactiKlientskaData() {
+            // Načtení her z DB
+            const { data: hry } = await supabase.from('games').select('*');
+            const gGrid = document.getElementById('gamesGrid');
+            const fGrid = document.getElementById('feedGrid');
+            
+            if (hry && hry.length > 0) {
+                gGrid.innerHTML = "";
+                fGrid.innerHTML = "";
+                hry.forEach((h, index) => {
+                    const cardHtml = `<div class="game-card"><div class="game-thumbnail">${h.emoji}</div><div class="game-info"><div class="game-name">${h.name}</div></div></div>`;
+                    gGrid.innerHTML += cardHtml;
+                    if (index < 2) fGrid.innerHTML += cardHtml; // První dvě dáme do doporučených
+                });
+            } else {
+                gGrid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Katalog her je prázdný.</p>";
+                fGrid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádná doporučení.</p>";
             }
-            return pole;
-        }
 
-        async function nactiHryAFeed(filtr = "") {
-            let query = supabase.from('games').select('*');
-            if (filtr) query = query.ilike('name', `%${filtr}%`);
-            const { data: hry } = await query;
-            if (!hry) return;
-
-            vykresliHry(hry, 'gamesGrid');
-            if (!filtr) vykresliHry(promichej([...hry]).slice(0, 3), 'feedGrid');
-        }
-
-        function vykresliHry(hry, elId) {
-            const grid = document.getElementById(elId); grid.innerHTML = "";
-            if (hry.length === 0) { grid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádné hry neodpovídají hledání.</p>"; return; }
-            hry.forEach(hra => {
-                grid.innerHTML += `
-                    <div class="game-card" onclick="spustHru('${hra.url_path}', '${hra.name}')">
-                        <div class="game-thumbnail">${hra.emoji}</div>
-                        <div class="game-info">
-                            <div class="game-name">${hra.name}</div>
-                            <div class="game-author">od ${hra.creator}</div>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        // Načtení a zobrazení přátel (Včetně detekce her a JOIN akce)
-        async function nactiPratele() {
-            if (!mojeId) return;
-            const { data: vztahy } = await supabase.from('friends').select('friend_id').eq('user_id', mojeId);
-            friendsList.innerHTML = "";
-            if (!vztahy || vztahy.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Zatím nemáš žádné přátele.</p>"; return; }
-
-            const ids = vztahy.map(v => v.friend_id);
-            const { data: online } = await supabase.from('online_players').select('id, username, current_game').in('id', ids);
-
-            if (!online || online.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Žádný z přátel zrovna nehraje.</p>"; return; }
-
-            online.forEach(k => {
-                const jeLobby = k.current_game === 'Lobby';
-                const btn = !jeLobby ? `<button class="sm-btn" style="background:var(--accent-success);" onclick="najdiAJoinni('${k.current_game}')">JOIN</button>` : '';
-                friendsList.innerHTML += `
-                    <div class="user-item">
-                        <div>
-                            <div class="user-item-name">${k.username}</div>
-                            <div class="user-item-status">${jeLobby ? 'V lobby' : 'Hraje: ' + k.current_game}</div>
-                        </div>
-                        ${btn}
-                    </div>`;
-            });
-        }
-
-        async function najdiAJoinni(nHry) {
-            const { data } = await supabase.from('games').select('url_path').eq('name', nHry).single();
-            if (data) spustHru(data.url_path, nHry);
-        }
-
-        async function spustHru(cesta, nazev) {
-            if (mojeId) await supabase.from('online_players').update({ current_game: nazev, updated_at: new Date().toISOString() }).eq('id', mojeId);
-            window.location.href = cesta;
-        }
-
-        // Vyhledávání a přidávání nových lidí
-        searchPlayerBtn.addEventListener('click', async () => {
-            const jmeno = searchPlayerInput.value.trim(); if (!jmeno) return;
-            playerSearchResults.innerHTML = "<p style='color:var(--text-muted); font-size:0.8rem;'>Hledám...</p>";
-
-            const { data: nalezeni } = await supabase.from('online_players').select('id, username').ilike('username', `%${jmeno}%`).not('id', 'eq', mojeId);
-            playerSearchResults.innerHTML = "";
-            if (!nalezeni || nalezeni.length === 0) { playerSearchResults.innerHTML = "<p style='color:var(--text-muted); font-size:0.8rem;'>Nikdo nenalezen.</p>"; return; }
-
-            nalezeni.forEach(h => {
-                playerSearchResults.innerHTML += `
-                    <div class="user-item">
-                        <span class="user-item-name">${h.username}</span>
-                        <button class="sm-btn" style="background:var(--accent);" onclick="pridatDoPratel('${h.id}', '${h.username}')">Přidat</button>
-                    </div>`;
-            });
-        });
-
-        async function pridatDoPratel(fId, fName) {
-            const { error } = await supabase.from('friends').insert([{ user_id: mojeId, friend_id: fId }]);
-            if (error) alert("Tohoto hráče už v přátelích máš!");
-            else { alert(`${fName} byl přidán do přátel!`); nactiPratele(); }
-        }
-
-        // Realtime Chat přes Broadcast systém
-        function spustRealtimeChat() {
-            chatKanal = supabase.channel('lobby_global_chat', { config: { broadcast: { self: true } } });
-
-            chatKanal.on('broadcast', { event: 'zprava' }, (payload) => {
-                pridejZpravuDoChatu(payload.payload.autor, payload.payload.text);
+            // Aktivace globálního real-time chatu přes Supabase Broadcast
+            chatKanal = supabase.channel('lobby_global', { config: { broadcast: { self: true } } });
+            chatKanal.on('broadcast', { event: 'shout' }, payload => {
+                const msgBox = document.getElementById('chatMessages');
+                const div = document.createElement('div');
+                div.className = 'chat-msg';
+                div.innerHTML = `<div class="chat-msg-user">${payload.payload.user}</div><div>${payload.payload.msg}</div>`;
+                msgBox.appendChild(div);
+                msgBox.scrollTop = msgBox.scrollHeight;
             }).subscribe();
         }
 
-        function pridejZpravuDoChatu(autor, text) {
-            const msgEl = document.createElement('div');
-            msgEl.className = 'chat-msg';
-            msgEl.innerHTML = `<div class="chat-msg-user">${autor}</div><div>${text}</div>`;
-            chatMessages.appendChild(msgEl);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+        // 5. ODESÍLÁNÍ CHAT ZPRÁV
+        document.getElementById('chatSendBtn').addEventListener('click', () => {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (text && chatKanal) {
+                chatKanal.send({ type: 'broadcast', event: 'shout', payload: { user: mujUsername, msg: text } });
+                input.value = "";
+            }
+        });
 
-        function odesliChat() {
-            const text = chatInput.value.trim();
-            if (!text || !chatKanal) return;
+        // 6. ODHLÁŠENÍ ZE SYSTÉMU
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            if (mojeId && supabase) await supabase.from('online_players').delete().eq('id', mojeId);
+            if (chatKanal) chatKanal.unsubscribe();
+            if (supabase) await supabase.auth.signOut();
+            window.location.reload();
+        });
 
-            chatKanal.send({
-                type: 'broadcast', event: 'zprava', payload: { autor: mujUsername, text: text }
-            });
-            chatInput.value = "";
-        }
-
-        chatSendBtn.addEventListener('click', odesliChat);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') odesliChat(); });
-        searchBar.addEventListener('input', (e) => nactiHryAFeed(e.target.value));
-
-        // Spuštění kontroly hned při načtení stránky
+        // Spuštění kontroly na pozadí při startu webu
         checkUser();
     </script>
 </body>
