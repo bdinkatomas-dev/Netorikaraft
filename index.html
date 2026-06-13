@@ -179,13 +179,13 @@
         .user-item-status { font-size: 0.75rem; color: var(--text-muted); }
         .sm-btn { width: auto; padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; }
 
-        /* --- GLOBÁLNÍ LOBBY CHAT STYLY --- */
-        .chat-container { display: flex; flex-direction: column; height: 400px; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
+        /* Lobby chat */
+        .chat-container { display: flex; flex-direction: column; height: 350px; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
         .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
         .chat-msg { background: var(--bg-input); padding: 8px 12px; border-radius: 8px; word-break: break-word; }
         .chat-msg-user { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
         .chat-input-area { display: flex; gap: 8px; padding: 12px; background: #12141a; }
-        .chat-input-area input { padding: 10px; border-radius: 6px; }
+        .chat-input-area input { padding: 10px; border-radius: 6px; margin: 0; }
         .chat-input-area button { width: auto; padding: 0 16px; border-radius: 6px; }
     </style>
 </head>
@@ -199,7 +199,7 @@
                 
                 <div class="form-group"><input type="email" id="email" placeholder="E-mail"></div>
                 <div class="form-group" id="usernameGroup" style="display: none;"><input type="text" id="username" placeholder="Uživatelské jméno"></div>
-                <div class="form-group"><input type="password" id="password" placeholder="Heslo"></div>
+                <div class="form-group"><input type="password" id="password" placeholder="Heslo (min. 6 znaků)"></div>
                 
                 <button id="authBtn">Přihlásit se</button>
                 <div class="switch-auth" id="switchAuth">Nemáš účet? <span>Zaregistruj se</span></div>
@@ -253,7 +253,7 @@
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
                         <input type="text" id="chatInput" placeholder="Napiš zprávu...">
-                        <button id="chatSendBtn">Odeslat</button>
+                        <button id="chatSendBtn">Poslat</button>
                     </div>
                 </div>
             </div>
@@ -261,7 +261,7 @@
     </div>
 
     <script>
-        // CONFIG KONTROLA: Zadej své Supabase parametry
+        // Nastavení konfigurace tvého projektu ze Supabase
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -271,7 +271,7 @@
         let mujUsername = "";
         let chatKanal = null;
 
-        // Elementy z DOM
+        // Načtení UI prvků
         const authPage = document.getElementById('authPage');
         const clientPage = document.getElementById('clientPage');
         const authTitle = document.getElementById('authTitle');
@@ -291,7 +291,7 @@
         const searchBar = document.getElementById('searchBar');
         const userDisplay = document.getElementById('userDisplay');
 
-        // Přepínání formulářů
+        // Přepínání mezi LOGIN a REGISTER režimem tlačítek
         switchAuth.addEventListener('click', () => {
             isLoginMode = !isLoginMode;
             if (isLoginMode) {
@@ -299,25 +299,42 @@
                 usernameGroup.style.display = "none"; authBtn.innerText = "Přihlásit se";
                 switchAuth.innerHTML = "Nemáš účet? <span>Zaregistruj se</span>";
             } else {
-                authTitle.innerText = "Vytvořit účet"; authDesc.innerText = "Začni objevovat a budovat hry";
+                authTitle.innerText = "Registrace"; authDesc.innerText = "Vytvoř si nový herní účet";
                 usernameGroup.style.display = "block"; authBtn.innerText = "Zaregistrovat se";
                 switchAuth.innerHTML = "Už máš účet? <span>Přihlas se</span>";
             }
         });
 
-        // Přihlašovací logika
+        // Odeslání formuláře (Přihlášení / Registrace)
         authBtn.addEventListener('click', async () => {
-            const email = document.getElementById('email').value;
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
+
+            if (!email || !password) {
+                alert("Vyplň e-mail a heslo!");
+                return;
+            }
 
             if (isLoginMode) {
+                // PŘIHLÁŠENÍ
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
-                if (error) alert(error.message); else checkUser();
+                if (error) alert("Chyba přihlášení: " + error.message); 
+                else checkUser();
             } else {
-                if (!username) { alert("Zadej jméno!"); return; }
-                const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: username } } });
-                if (error) alert(error.message); else alert("Účet vytvořen, můžeš se přihlásit.");
+                // REGISTRACE
+                if (!username) { alert("Zadej uživatelské jméno!"); return; }
+                const { error } = await supabase.auth.signUp({ 
+                    email, 
+                    password, 
+                    options: { data: { display_name: username } } 
+                });
+                if (error) {
+                    alert("Chyba registrace: " + error.message);
+                } else {
+                    alert("Účet úspěšně vytvořen! Nyní se zkus přihlásit.");
+                    switchAuth.click(); // Přepne vizuál na přihlášení
+                }
             }
         });
 
@@ -331,7 +348,7 @@
 
         function showPage(p) { authPage.classList.remove('active'); clientPage.classList.remove('active'); document.getElementById(p).classList.add('active'); }
 
-        // Start klienta a nastavení profilu online
+        // Kontrola stavu uživatele na pozadí (Základní pilíř SPA systému)
         async function checkUser() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
@@ -340,20 +357,24 @@
                 userDisplay.innerText = mujUsername;
                 showPage('clientPage');
                 
-                // Nahlášení do Lobby stavu
+                // Zápis do databáze, že jsme aktivní v Lobby
                 await supabase.from('online_players').upsert({
                     id: mojeId, username: mujUsername, email: user.email, current_game: 'Lobby', updated_at: new Date().toISOString()
                 });
 
+                // Načtení dat do dashboardu
                 nactiHryAFeed();
                 nactiPratele();
                 spustRealtimeChat();
 
+                // Pravidelná smyčka pro aktualizaci online přátel
                 setInterval(nactiPratele, 6000);
-            } else { showPage('authPage'); }
+            } else { 
+                showPage('authPage'); 
+            }
         }
 
-        // Algoritmus pro denní náhodný feed
+        // Algoritmus pro promíchání pole (Fisher-Yates Shuffle)
         function promichej(pole) {
             for (let i = pole.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -374,7 +395,7 @@
 
         function vykresliHry(hry, elId) {
             const grid = document.getElementById(elId); grid.innerHTML = "";
-            if (hry.length === 0) { grid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádné položky.</p>"; return; }
+            if (hry.length === 0) { grid.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádné hry neodpovídají hledání.</p>"; return; }
             hry.forEach(hra => {
                 grid.innerHTML += `
                     <div class="game-card" onclick="spustHru('${hra.url_path}', '${hra.name}')">
@@ -387,17 +408,17 @@
             });
         }
 
-        // Načtení přátel a detekce tlačítka JOIN
+        // Načtení a zobrazení přátel (Včetně detekce her a JOIN akce)
         async function nactiPratele() {
             if (!mojeId) return;
             const { data: vztahy } = await supabase.from('friends').select('friend_id').eq('user_id', mojeId);
             friendsList.innerHTML = "";
-            if (!vztahy || vztahy.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Nemáš přátele.</p>"; return; }
+            if (!vztahy || vztahy.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Zatím nemáš žádné přátele.</p>"; return; }
 
             const ids = vztahy.map(v => v.friend_id);
             const { data: online } = await supabase.from('online_players').select('id, username, current_game').in('id', ids);
 
-            if (!online || online.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Nikdo nehraje.</p>"; return; }
+            if (!online || online.length === 0) { friendsList.innerHTML = "<p style='color:var(--text-muted);font-size:0.8rem;'>Žádný z přátel zrovna nehraje.</p>"; return; }
 
             online.forEach(k => {
                 const jeLobby = k.current_game === 'Lobby';
@@ -423,7 +444,7 @@
             window.location.href = cesta;
         }
 
-        // Hledání nových hráčů
+        // Vyhledávání a přidávání nových lidí
         searchPlayerBtn.addEventListener('click', async () => {
             const jmeno = searchPlayerInput.value.trim(); if (!jmeno) return;
             playerSearchResults.innerHTML = "<p style='color:var(--text-muted); font-size:0.8rem;'>Hledám...</p>";
@@ -443,11 +464,11 @@
 
         async function pridatDoPratel(fId, fName) {
             const { error } = await supabase.from('friends').insert([{ user_id: mojeId, friend_id: fId }]);
-            if (error) alert("Již jsou v přátelích!");
-            else { alert(`${fName} byl přidán!`); nactiPratele(); }
+            if (error) alert("Tohoto hráče už v přátelích máš!");
+            else { alert(`${fName} byl přidán do přátel!`); nactiPratele(); }
         }
 
-        // --- REALTIME CHAT SYSTÉM (P2P přes Broadcast) ---
+        // Realtime Chat přes Broadcast systém
         function spustRealtimeChat() {
             chatKanal = supabase.channel('lobby_global_chat', { config: { broadcast: { self: true } } });
 
@@ -461,7 +482,7 @@
             msgEl.className = 'chat-msg';
             msgEl.innerHTML = `<div class="chat-msg-user">${autor}</div><div>${text}</div>`;
             chatMessages.appendChild(msgEl);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto scroll dolů
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
         function odesliChat() {
@@ -478,6 +499,7 @@
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') odesliChat(); });
         searchBar.addEventListener('input', (e) => nactiHryAFeed(e.target.value));
 
+        // Spuštění kontroly hned při načtení stránky
         checkUser();
     </script>
 </body>
