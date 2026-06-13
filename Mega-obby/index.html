@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netorikaraft - Mega Obby</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --bg-main: #0d0e12;
+            --bg-nav: #161920;
+            --accent: #3b82f6;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- NOVÝ ROBLOX-STYLE HEADER --- */
+        #gameHeader {
+            width: 100%;
+            padding: 14px 24px;
+            background: var(--bg-nav);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            border-bottom: 1px solid #202430;
+        }
+
+        .brand-zone {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            font-size: 1.6rem;
+            line-height: 1;
+        }
+
+        .brand-name {
+            font-weight: 700;
+            font-size: 1.3rem;
+            letter-spacing: -0.5px;
+        }
+
+        .game-tag {
+            background: #202430;
+            color: var(--accent);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .btn-leave {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-leave:hover {
+            background: var(--danger-hover);
+        }
+        
+        .btn-leave:active {
+            transform: scale(0.96);
+        }
+
+        /* --- CANVAS --- */
+        canvas {
+            background: #161920;
+            display: block;
+            margin-top: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            border: 1px solid #202430;
+        }
+
+        .controls-info {
+            margin-top: 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            background: #161920;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #202430;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameHeader">
+        <div class="brand-zone">
+            <span class="logo-icon">🚀</span>
+            <span class="brand-name">Netorikaraft</span>
+            <span class="game-tag">Útěk z vězení OBBY</span>
+        </div>
+        <button class="btn-leave" onclick="vratSeDoLobby()">Leave Game</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    
+    <div class="controls-info">⌨️ <b>Ovládání:</b> Šipky / WASD = pohyb | Mezerník = Skok</div>
+
+    <script>
+        // --- SUPABASE CONFIG ---
+        const SUPABASE_URL = "TVOJE_SUPABASE_URL";
+        const SUPABASE_KEY = "TVŮJ_ANON_KEY";
+        
+        let sb = null;
+        let mojeId = null;
+
+        try {
+            if (SUPABASE_URL !== "TVOJE_SUPABASE_URL") {
+                sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+        } catch(e) { console.error(e); }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Fyzika a Hráč
+        const hrac = {
+            x: 50, y: 300, sirka: 30, vyska: 30,
+            rychlostX: 0, rychlostY: 0,
+            veVzduchu: false, barva: '#3b82f6'
+        };
+
+        const gravitace = 0.5;
+        const treni = 0.8;
+        const klavesy = {};
+
+        // Platformy, láva, cíl
+        const platformy = [
+            { x: 0, y: 350, w: 150, h: 50 },
+            { x: 220, y: 300, w: 80, h: 20 },
+            { x: 380, y: 250, w: 80, h: 20 },
+            { x: 540, y: 200, w: 80, h: 20 },
+            { x: 680, y: 150, w: 120, h: 250 }
+        ];
+
+        const lava = [{ x: 150, y: 380, w: 530, h: 20 }];
+        const cil = { x: 740, y: 100, w: 30, h: 50 };
+
+        window.addEventListener('keydown', e => klavesy[e.code] = true);
+        window.addEventListener('keyup', e => klavesy[e.code] = false);
+
+        // Ověření stavu v databázi
+        async function overHrace() {
+            if (!sb) return;
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                mojeId = user.id;
+                await sb.from('online_players').update({ current_game: 'Útěk z vězení OBBY', updated_at: new Date().toISOString() }).eq('id', mojeId);
+            }
+        }
+
+        // AKCE PRO TLAČÍTKO LEAVE
+        async function vratSeDoLobby() {
+            if (sb && mojeId) {
+                // Přepnutí stavu zpět na Lobby, než odejdeme
+                await sb.from('online_players').update({ current_game: 'Lobby', updated_at: new Date().toISOString() }).eq('id', mojeId);
+            }
+            window.location.href = '../index.html';
+        }
+
+        // Game Loop
+        function aktualizujHru() {
+            if (klavesy['ArrowRight'] || klavesy['KeyD']) hrac.rychlostX = 4;
+            else if (klavesy['ArrowLeft'] || klavesy['KeyA']) hrac.rychlostX = -4;
+            else hrac.rychlostX *= treni;
+
+            if ((klavesy['ArrowUp'] || klavesy['Space'] || klavesy['KeyW']) && !hrac.veVzduchu) {
+                hrac.rychlostY = -10; hrac.veVzduchu = true;
+            }
+
+            hrac.rychlostY += gravitace; hrac.x += hrac.rychlostX; hrac.y += hrac.rychlostY;
+            hrac.veVzduchu = true;
+
+            platformy.forEach(p => {
+                if (hrac.x < p.x + p.w && hrac.x + hrac.sirka > p.x && hrac.y + hrac.vyska > p.y && hrac.y < p.y + p.h) {
+                    if (hrac.rychlostY > 0) { hrac.rychlostY = 0; hrac.y = p.y - hrac.vyska; hrac.veVzduchu = false; }
+                }
+            });
+
+            lava.forEach(l => {
+                if (hrac.x < l.x + l.w && hrac.x + hrac.sirka > l.x && hrac.y + hrac.vyska > l.y && hrac.y < l.y + l.h) restartHry();
+            });
+
+            if (hrac.x < cil.x + cil.w && hrac.x + hrac.sirka > cil.x && hrac.y + hrac.vyska > cil.y && hrac.y < cil.y + cil.h) {
+                alert("🎉 Výhra! Úspěšně jsi utekl!"); restartHry();
+            }
+
+            // Vykreslování grafiky
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#202430'; platformy.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+            ctx.fillStyle = '#ef4444'; lava.forEach(l => ctx.fillRect(l.x, l.y, l.w, l.h));
+            ctx.fillStyle = '#10b981'; ctx.fillRect(cil.x, cil.y, cil.w, cil.h);
+            ctx.fillStyle = hrac.barva; ctx.fillRect(hrac.x, hrac.y, hrac.sirka, hrac.vyska);
+
+            requestAnimationFrame(aktualizujHru);
+        }
+
+        function restartHry() { hrac.x = 50; hrac.y = 300; hrac.rychlostX = 0; hrac.rychlostY = 0; }
+
+        overHrace();
+        aktualizujHru();
+    </script>
+</body>
+</html>
