@@ -240,7 +240,7 @@
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
 
-        let sb = null; // Přejmenováno z 'supabase', aby nedocházelo ke kolizi s CDN knihovnou
+        let sb = null; 
         let isLoginMode = true;
         let mojeId = null;
         let mujUsername = "";
@@ -351,7 +351,15 @@
                 gGrid.innerHTML = "";
                 fGrid.innerHTML = "";
                 hry.forEach((h, index) => {
-                    const cardHtml = `<div class="game-card"><div class="game-thumbnail">${h.emoji}</div><div class="game-info"><div class="game-name">${h.name}</div></div></div>`;
+                    // AUTOMATICKÉ SPOJOVÁNÍ CESTY S EXPLICITNÍ VERCEL ADRESOU
+                    const cardHtml = `
+                        <div class="game-card" onclick="window.location.href='https://netorikaraft.vercel.app${h.url_path}'">
+                            <div class="game-thumbnail">${h.emoji}</div>
+                            <div class="game-info">
+                                <div class="game-name">${h.name}</div>
+                            </div>
+                        </div>`;
+                        
                     gGrid.innerHTML += cardHtml;
                     if (index < 2) fGrid.innerHTML += cardHtml;
                 });
