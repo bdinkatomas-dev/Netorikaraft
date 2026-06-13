@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Next-Gen Roblox Obby</title>
+    <title>Netorikaraft - Mega Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.js"></script>
@@ -19,12 +19,11 @@
             --danger: #ef4444;
         }
 
-        * { box-sizing: border-box; user-select: none; margin: 0; padding: 0; }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; margin: 0; padding: 0; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0c10; font-family: 'Inter', sans-serif; }
 
         #gameCanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; z-index: 1; }
 
-        /* MODERNÍ ROBLOX HUD */
         #gameHeader {
             position: absolute; top: 0; left: 0; width: 100%; padding: 16px 32px;
             background: linear-gradient(to bottom, rgba(10,12,16,0.8), rgba(10,12,16,0));
@@ -33,8 +32,8 @@
         }
 
         .brand-zone { display: flex; align-items: center; gap: 16px; color: var(--text-main); pointer-events: auto; }
-        .brand-name { font-weight: 800; font-size: 1.3rem; letter-spacing: -0.5px; text-transform: uppercase; background: linear-gradient(45deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .game-tag { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; backdrop-filter: blur(4px); }
+        .brand-name { font-weight: 900; font-size: 1.4rem; letter-spacing: -0.5px; text-transform: uppercase; background: linear-gradient(45deg, #ffdd00, #ff5500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .game-tag { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; backdrop-filter: blur(4px); }
         .level-tag { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; backdrop-filter: blur(4px); }
 
         .btn-leave {
@@ -53,25 +52,44 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: white; text-align: center; background: radial-gradient(circle, rgba(15,23,42,0.85) 0%, rgba(10,12,16,0.95) 100%);
-            z-index: 100; cursor: pointer; backdrop-filter: blur(12px); transition: opacity 0.4s;
+            z-index: 100; cursor: pointer; backdrop-filter: blur(12px);
         }
         .start-card {
             background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
             padding: 40px 60px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
-        .start-card h2 { font-size: 2.2rem; font-weight: 800; margin-bottom: 15px; background: linear-gradient(45deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .start-card h2 { font-size: 2.2rem; font-weight: 900; margin-bottom: 15px; color: #ffdd00; }
         .start-card p { color: #94a3b8; font-size: 1rem; line-height: 1.6; }
-        .start-card .click-prompt { margin-top: 25px; color: #3b82f6; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; animation: pulse 1.5s infinite; }
 
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        /* MOBILNÍ OVLÁDÁNÍ - SKRYTÉ PRO PC, ZOBRAZÍ SE JEN DÍKY JS */
+        #mobileControls {
+            position: absolute; bottom: 40px; left: 0; width: 100%; padding: 0 40px;
+            display: none; justify-content: space-between; align-items: center; z-index: 50;
+            pointer-events: none;
+        }
+        .move-container {
+            width: 130px; height: 130px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%; position: relative; pointer-events: auto; touch-action: none; backdrop-filter: blur(4px);
+        }
+        #joystickStick {
+            width: 50px; height: 50px; background: rgba(255,255,255,0.4); border-radius: 50%;
+            position: absolute; top: 40px; left: 40px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .action-container { pointer-events: auto; }
+        .btn-jump-mobile {
+            width: 85px; height: 85px; background: rgba(255, 255, 255, 0.15); border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%; color: white; font-weight: 900; font-size: 1.1rem;
+            display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); touch-action: none;
+        }
+        .btn-jump-mobile:active { background: rgba(255, 221, 0, 0.4); border-color: #ffdd00; }
     </style>
 </head>
 <body>
 
     <div id="gameHeader">
         <div class="brand-zone">
-            <span class="brand-name">Netorikaraft RTX</span>
-            <span class="game-tag" id="dynamicGameName">Roblox Ultra Obby</span>
+            <span class="brand-name">Netorikaraft R15</span>
+            <span class="game-tag" id="dynamicGameName">Roblox Pro Obby</span>
             <span class="level-tag" id="levelDisplay">Level 1 / 100</span>
         </div>
         <button class="btn-leave" onclick="vratSeDoLobby()">Leave</button>
@@ -79,9 +97,18 @@
 
     <div id="instructions" onclick="zamkniMys()">
         <div class="start-card">
-            <h2>SPUSTIT HRU</h2>
-            <p>Pohyb: <b>W, A, S, D</b> nebo <b>Šipky</b><br>Skok: <b>Mezerník</b><br>Rozhlížení: <b>Pohyb myší</b></p>
-            <div class="click-prompt">Klikni kamkoliv pro vstup do světa</div>
+            <h2>SPUSTIT ROBLOX OBBY</h2>
+            <p><b>PC:</b> Pohyb přes W, A, S, D | Rozhlížení myší | Skok Mezerník<br><b>Mobil:</b> Joystick na obrazovce | Tažení po pravé straně rozhlíží</p>
+            <p style="margin-top: 15px; color: #ffdd00;">Klikni pro start!</p>
+        </div>
+    </div>
+
+    <div id="mobileControls">
+        <div class="move-container" id="joystickZone">
+            <div id="joystickStick"></div>
+        </div>
+        <div class="action-container">
+            <div class="btn-jump-mobile" id="btnJumpMobile">JUMP</div>
         </div>
     </div>
 
@@ -100,7 +127,7 @@
             if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_URL !== "TVOJE_SUPABASE_URL") {
                 sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             }
-        } catch(e) { console.error(e); }
+        } catch(e) {}
 
         let scena, kamera, renderer, lokalniKontejnerAvatar;
         let platformyFyzika = []; let lavaFyzika = []; let cilFyzika = null;
@@ -109,148 +136,205 @@
         const hrac = {
             pozice: new THREE.Vector3(0, 3, 0),
             rychlost: new THREE.Vector3(0, 0, 0),
-            sirka: 0.8, vyska: 1.8, hloubka: 0.8, veVzduchu: true
+            sirka: 0.8, vyska: 2.0, hloubka: 0.8, veVzduchu: true
         };
 
-        const RYCHLOST_POHYBU = 0.14;
-        const SILA_SKOKU = 0.23;
+        const RYCHLOST_POHYBU = 0.15;
+        const SILA_SKOKU = 0.24;
         const GRAVITACE = 0.0095;
 
+        // Klíče pro PC a stav pro Mobil
         const klavesy = {};
+        let mobilniSmer = { x: 0, y: 0 };
+        let mobilniSkok = false;
         let rotaceKamery = { yaw: 0, pitch: 0 };
+        let isMobile = false;
 
-        // 1. INICIALIZACE ULTRA GRAFIKY V THREE.JS
         function init3D() {
             const container = document.getElementById('gameCanvas');
             scena = new THREE.Scene();
-            
-            // Roblox styl mlhy (Hloubka ostrosti, která maskuje okraje herního světa)
-            scena.background = new THREE.Color(0x111622);
-            scena.fog = new THREE.FogExp2(0x111622, 0.018);
+            scena.background = new THREE.Color(0x0e121a);
+            scena.fog = new THREE.FogExp2(0x0e121a, 0.015);
 
             kamera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
             
-            // Nastavení vykreslovacího jádra na maximální kvalitu
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Hlídání ostrosti hran
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Nádherné měkké stíny
-            renderer.toneMapping = THREE.ACESFilmicToneMapping; // Filmové barvy a kontrast jako v AAA hrách
-            renderer.toneMappingExposure = 1.0;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             container.appendChild(renderer.domElement);
 
-            // GLOBÁLNÍ GENERÁTOR NEBESKÉHO GRADIENTU (Nádherná obloha místo černé díry)
-            vytvorSkybox();
+            // Osvětlení
+            scena.add(new THREE.AmbientLight(0xffffff, 0.45));
+            scena.add(new THREE.HemisphereLight(0x8bc34a, 0x0e121a, 0.35));
 
-            // OSVĚTLENÍ (Kombinace okolního světla pro stíny a ostrého slunce pro lesk)
-            const ambientniSvetlo = new THREE.AmbientLight(0xffffff, 0.4);
-            scena.add(ambientniSvetlo);
-
-            // Druhotné modravé světlo simulující odraz oblohy
-            const svetloOblohy = new THREE.HemisphereLight(0x7dd3fc, 0x111622, 0.4);
-            scena.add(svetloOblohy);
-
-            const slunce = new THREE.DirectionalLight(0xfffbeb, 1.2);
-            slunce.position.set(30, 60, 20);
+            const slunce = new THREE.DirectionalLight(0xfffbeb, 1.3);
+            slunce.position.set(25, 55, 15);
             slunce.castShadow = true;
-            
-            // Precizní nastavení stínové mapy
             slunce.shadow.mapSize.width = 2048;
             slunce.shadow.mapSize.height = 2048;
-            slunce.shadow.camera.near = 0.5;
-            slunce.shadow.camera.far = 150;
-            const d = 40;
-            slunce.shadow.camera.left = -d; slunce.shadow.camera.right = d;
-            slunce.shadow.camera.top = d; slunce.shadow.camera.bottom = -d;
-            slunce.shadow.bias = -0.0005;
+            slunce.shadow.bias = -0.0004;
             scena.add(slunce);
 
-            // Vytvoření prémiového avatara
-            lokalniKontejnerAvatar = vytvorHezkehoAvatara(parseInt(mojeBarvaHex.replace("#", "0x")));
+            // DETEKCE MOBILU - Pokud je to mobil/tablet, zapne se dotykové rozhraní
+            isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+            if (isMobile) {
+                document.getElementById('mobileControls').style.display = 'flex';
+                setupMobilniOvladani();
+            }
+
+            // Vytvoření klasického hranatého Roblox R15 avatara
+            lokalniKontejnerAvatar = vytvorRobloxAvatara(parseInt(mojeBarvaHex.replace("#", "0x")));
             scena.add(lokalniKontejnerAvatar);
 
+            // Listenery pro PC klávesnici - BĚŽÍ NONSTOP
             window.addEventListener('keydown', e => { klavesy[e.code] = true; });
             window.addEventListener('keyup', e => { klavesy[e.code] = false; });
-            document.addEventListener('mousemove', pohniKamerou);
+            
+            if (!isMobile) {
+                document.addEventListener('mousemove', pohniKamerouPC);
+            }
+
             window.addEventListener('resize', onWindowResize);
 
             document.addEventListener('pointerlockchange', () => {
+                if (isMobile) return;
                 if (document.pointerLockElement === container) {
-                    document.getElementById('instructions').style.opacity = '0';
-                    setTimeout(() => document.getElementById('instructions').style.display = 'none', 400);
+                    document.getElementById('instructions').style.display = 'none';
                     document.getElementById('crosshair').style.display = 'block';
                 } else {
                     document.getElementById('instructions').style.display = 'flex';
-                    setTimeout(() => document.getElementById('instructions').style.opacity = '1', 10);
                     document.getElementById('crosshair').style.display = 'none';
                 }
             });
         }
 
-        function zamkniMys() { document.getElementById('gameCanvas').requestPointerLock(); }
+        function zamkniMys() {
+            if (isMobile) {
+                document.getElementById('instructions').style.display = 'none';
+            } else {
+                document.getElementById('gameCanvas').requestPointerLock();
+            }
+        }
 
-        function pohniKamerou(e) {
+        function pohniKamerouPC(e) {
             if (document.pointerLockElement !== document.getElementById('gameCanvas')) return;
-            rotaceKamery.yaw -= e.movementX * 0.0022;
-            rotaceKamery.pitch -= e.movementY * 0.0022;
+            rotaceKamery.yaw -= e.movementX * 0.0025;
+            rotaceKamery.pitch -= e.movementY * 0.0025;
             rotaceKamery.pitch = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, rotaceKamery.pitch));
         }
 
-        function vytvorSkybox() {
-            const geoObloha = new THREE.SphereGeometry(500, 32, 15);
-            const matObloha = new THREE.MeshBasicMaterial({
-                color: 0x1b2336,
-                side: THREE.BackSide
+        // 📱 MOBILNÍ TOUCH JOYSTICK + ROZHLÍŽENÍ TAŽENÍM
+        function setupMobilniOvladani() {
+            const stick = document.getElementById('joystickStick');
+            const zone = document.getElementById('joystickZone');
+            let drag = false; let startTouchX = 0, startTouchY = 0;
+
+            zone.addEventListener('touchstart', e => {
+                drag = true;
+                const t = e.touches[0];
+                startTouchX = t.clientX; startTouchY = t.clientY;
             });
-            const mObloha = new THREE.Mesh(geoObloha, matObloha);
-            scena.add(mObloha);
+
+            window.addEventListener('touchmove', e => {
+                if (!drag) return;
+                const t = e.touches[0];
+                let dx = t.clientX - startTouchX;
+                let dy = t.clientY - startTouchY;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist > 45) { dx = (dx/dist)*45; dy = (dy/dist)*45; dist = 45; }
+                
+                stick.style.transform = `translate(${dx}px, ${dy}px)`;
+                
+                // Normalizace směru chůze
+                mobilniSmer.x = dx / 45;
+                mobilniSmer.y = dy / 45;
+            });
+
+            window.addEventListener('touchend', () => {
+                drag = false; stick.style.transform = 'translate(0px, 0px)';
+                mobilniSmer.x = 0; mobilniSmer.y = 0;
+            });
+
+            // Mobilní skok
+            const jBtn = document.getElementById('btnJumpMobile');
+            jBtn.addEventListener('touchstart', (e) => { e.preventDefault(); mobilniSkok = true; });
+            jBtn.addEventListener('touchend', () => { mobilniSkok = false; });
+
+            // Rozhlížení prstem na pravé půlce obrazovky
+            let rTouchId = null; let rLastX = 0, rLastY = 0;
+            window.addEventListener('touchstart', e => {
+                for(let i=0; i<e.changedTouches.length; i++){
+                    let touch = e.changedTouches[i];
+                    if(touch.clientX > window.innerWidth / 2) {
+                        rTouchId = touch.identifier; rLastX = touch.clientX; rLastY = touch.clientY;
+                    }
+                }
+            });
+            window.addEventListener('touchmove', e => {
+                for(let i=0; i<e.touches.length; i++){
+                    let touch = e.touches[i];
+                    if(touch.identifier === rTouchId) {
+                        let fX = touch.clientX - rLastX;
+                        let fY = touch.clientY - rLastY;
+                        rotaceKamery.yaw -= fX * 0.006;
+                        rotaceKamery.pitch -= fY * 0.006;
+                        rotaceKamery.pitch = Math.max(-Math.PI/2.3, Math.min(Math.PI/2.3, rotaceKamery.pitch));
+                        rLastX = touch.clientX; rLastY = touch.clientY;
+                    }
+                }
+            });
+            window.addEventListener('touchend', e => {
+                for(let i=0; i<e.changedTouches.length; i++){
+                    if(e.changedTouches[i].identifier === rTouchId) rTouchId = null;
+                }
+            });
         }
 
-        // 2. TVORBA AVATARA S JEMNÝMI DETAILY (Vylepšené materiály s leskem)
-        function vytvorHezkehoAvatara(barvaHex) {
+        // 🧸 100% ROBLOX BLOCKY AVATAR (Hranatý styl, přesné R15 proporce + tvářička)
+        function vytvorRobloxAvatara(barvaHex) {
             const kontejner = new THREE.Group();
-            
-            // Používáme Standardní materiály s odrazem světla
-            const matTelo = new THREE.MeshStandardMaterial({ color: barvaHex, roughness: 0.1, metalness: 0.1 });
-            const matKuzg = new THREE.MeshStandardMaterial({ color: 0xffe0bd, roughness: 0.5 });
-            const matObleceni = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.7 });
+            const matTelo = new THREE.MeshStandardMaterial({ color: barvaHex, roughness: 0.3, metalness: 0.0 });
+            const matKuzg = new THREE.MeshStandardMaterial({ color: 0xffd1a4, roughness: 0.4 });
+            const matKalhoty = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 });
 
-            // Trup (Zaoblenější vzhled díky zkosení hran vyřešíme vrstvením)
-            const mTelo = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.95, 0.4), matTelo);
-            mTelo.position.y = 0.87; mTelo.castShadow = true; mTelo.receiveShadow = true;
+            // Roblox Kostka Trup
+            const mTelo = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.0, 0.45), matTelo);
+            mTelo.position.y = 0.9; mTelo.castShadow = true; mTelo.receiveShadow = true;
             kontejner.add(mTelo);
             
-            // Hlava s čepicí
-            const mHlava = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.48, 0.48), matKuzg);
-            mHlava.position.y = 1.63; mHlava.castShadow = true;
+            // Hranatá hlava
+            const mHlava = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), matKuzg);
+            mHlava.position.y = 1.65; mHlava.castShadow = true;
             kontejner.add(mHlava);
 
-            const mSluchatka = new THREE.Mesh(new THREE.BoxGeometry(0.54, 0.15, 0.54), matObleceni);
-            mSluchatka.position.y = 1.85; mSluchatka.castShadow = true;
-            kontejner.add(mSluchatka);
+            // Roblox Smile (Očka a pusa vytvořená z malých kostiček pro 3D plastický efekt)
+            const matOci = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const okoL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.02), matOci);
+            okoL.position.set(-0.12, 1.7, 0.26); kontejner.add(okoL);
+            const okoP = okoL.clone(); okoP.position.x = 0.12; kontejner.add(okoP);
 
-            // Nohy
-            const mNohaL = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.4, 0.26), matObleceni);
-            mNohaL.position.set(-0.18, 0.2, 0); mNohaL.castShadow = true;
-            kontejner.add(mNohaL);
-            
-            const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.18;
-            kontejner.add(mNohaP);
+            const pusa = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.04, 0.02), matOci);
+            pusa.position.set(0, 1.56, 0.26); kontejner.add(pusa);
 
-            // Ruce (Roblox style oddělené končetiny)
-            const mRukaL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), matTelo);
-            mRukaL.position.set(-0.52, 0.85, 0); mRukaL.castShadow = true;
-            kontejner.add(mRukaL);
+            // Nohy (Roblox hranoly)
+            const mNohaL = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.45, 0.35), matKalhoty);
+            mNohaL.position.set(-0.22, 0.225, 0); mNohaL.castShadow = true; kontejner.add(mNohaL);
+            const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.22; kontejner.add(mNohaP);
 
-            const mRukaP = mRukaL.clone(); mRukaP.position.x = 0.52;
-            kontejner.add(mRukaP);
+            // Ruce
+            const mRukaL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.85, 0.32), matTelo);
+            mRukaL.position.set(-0.58, 0.85, 0); mRukaL.castShadow = true; kontejner.add(mRukaL);
+            const mRukaP = mRukaL.clone(); mRukaP.position.x = 0.58; kontejner.add(mRukaP);
 
             kontejner.userData = { nohaL: mNohaL, nohaP: mNohaP, rukaL: mRukaL, rukaP: mRukaP };
             return kontejner;
         }
 
-        // 3. GENERÁTOR ESTETICKÝCH PLATFOREM (Zářící neonové hrany, hladké povrchy)
+        // 🚧 NOVÝ PRO GENERÁTOR (Trasy zatáčí, obsahují barevné stupínky, lasery a delší skoky)
         function sestav3DLevel(n) {
             platformyFyzika.forEach(p => scena.remove(p.mesh));
             lavaFyzika.forEach(l => scena.remove(l.mesh));
@@ -258,181 +342,148 @@
 
             platformyFyzika = []; lavaFyzika = [];
 
-            // Luxusní herní materiály (Neonové záření a plastový Roblox povrch)
-            const matP = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.1 });
-            const matL = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.1, emissive: 0xef4444, emissiveIntensity: 1.5 }); // Skutečně svítící láva!
-            const matC = new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.05, emissive: 0x06b6d4, emissiveIntensity: 0.8, transparent: true, opacity: 0.7 });
+            const matP = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 });
+            const matL = new THREE.MeshStandardMaterial({ color: 0xff0033, roughness: 0.1, emissive: 0xff0000, emissiveIntensity: 2.0 });
+            const matC = new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 1.0, transparent: true, opacity: 0.8 });
 
-            // Startovní zóna
-            vytvorKostku(0, -1, 0, 7, 2, 7, matP, platformyFyzika);
+            // Start
+            vytvorKostku(0, -1, 0, 8, 2, 8, matP, platformyFyzika);
 
             let akt = new THREE.Vector3(0, 0, -4);
-            const pocetSkoku = 8;
+            const segmentu = 12; // Delší a zábavnější mapy
 
-            for(let i=1; i<=pocetSkoku; i++) {
-                let sirka = Math.max(1.6, 3.4 - (n * 0.015));
-                let hloubka = Math.max(1.6, 3.4 - (n * 0.015));
+            for(let i=1; i<=segmentu; i++) {
+                let s = Math.max(1.5, 3.5 - (n * 0.01));
                 
-                // Trasa kličkuje v prostoru do všech směrů
-                akt.x += Math.sin(i * 1.5 + n) * 4.0;
-                akt.y += Math.cos(i) * 0.5;
-                akt.z -= 5.0;
+                // Variabilita směru podle čísla plošinky
+                akt.x += Math.sin(i * 2 + n) * 4.5;
+                akt.y += (i % 2 === 0 ? 0.4 : -0.2);
+                akt.z -= 5.5;
 
-                // Vygenerování plošinky
-                vytvorKostku(akt.x, akt.y - 0.3, akt.z, sirka, 0.6, hloubka, matP, platformyFyzika);
+                // Duhové barvy plošinek jako v klasických Roblox mega obby barevných drahách
+                let barvaObby = new THREE.Color().setHSL((i / segmentu) + (n * 0.1), 0.8, 0.45);
+                let matObbyPlat = new THREE.MeshStandardMaterial({ color: barvaObby, roughness: 0.2 });
 
-                // Přidání překážek (Rotující kužely/kostky nahradíme přesnými zářícími lasery)
-                if (n >= 3 && i % 2 === 0) {
-                    vytvorKostku(akt.x, akt.y + 0.15, akt.z, sirka * 1.05, 0.3, 0.3, matL, lavaFyzika);
+                vytvorKostku(akt.x, akt.y - 0.25, akt.z, s, 0.5, s, matObbyPlat, platformyFyzika);
+
+                // Roblox nebezpečné červené lasery přes plošinku
+                if (i % 3 === 0) {
+                    vytvorKostku(akt.x, akt.y + 0.1, akt.z, s * 1.1, 0.2, 0.2, matL, lavaFyzika);
                 }
             }
 
-            // Cílový ostrov
-            akt.z -= 5.5;
-            vytvorKostku(akt.x, akt.y - 1, akt.z, 6, 2, 6, matP, platformyFyzika);
+            // Cíl
+            akt.z -= 6;
+            vytvorKostku(akt.x, akt.y - 1, akt.z, 7, 2, 7, matP, platformyFyzika);
 
-            // Svítící cílová brána (Brána do dalšího levelu)
-            const gCil = new THREE.BoxGeometry(2.5, 3.5, 0.4);
-            const mCil = new THREE.Mesh(gCil, matC);
-            mCil.position.set(akt.x, akt.y + 1.75, akt.z);
+            const mCil = new THREE.Mesh(new THREE.BoxGeometry(3, 4, 0.5), matC);
+            mCil.position.set(akt.x, akt.y + 2, akt.z);
             scena.add(mCil);
-            cilFyzika = { mesh: mCil, min: new THREE.Vector3(akt.x-1.25, akt.y, akt.z-0.2), max: new THREE.Vector3(akt.x+1.25, akt.y+3.5, akt.z+0.2) };
+            cilFyzika = { mesh: mCil, min: new THREE.Vector3(akt.x-1.5, akt.y, akt.z-0.25), max: new THREE.Vector3(akt.x+1.5, akt.y+4, akt.z+0.25) };
 
-            // Smrtící podlaha hluboko pod mapou (Obří oceán lávy)
-            vytvorKostku(akt.x / 2, -18, akt.z / 2, 400, 1, 400, matL, lavaFyzika);
+            // Velká záchranná láva pod celou mapou
+            vytvorKostku(akt.x / 2, -20, akt.z / 2, 500, 1, 500, matL, lavaFyzika);
         }
 
         function vytvorKostku(x, y, z, w, h, d, material, pole) {
             const geo = new THREE.BoxGeometry(w, h, d);
             const mesh = new THREE.Mesh(geo, material);
             mesh.position.set(x, y, z);
-            mesh.receiveShadow = true;
-            mesh.castShadow = true;
+            mesh.receiveShadow = true; mesh.castShadow = true;
             scena.add(mesh);
-
-            pole.push({
-                mesh: mesh,
-                min: new THREE.Vector3(x - w/2, y - h/2, z - d/2),
-                max: new THREE.Vector3(x + w/2, y + h/2, z + d/2)
-            });
+            pole.push({ mesh, min: new THREE.Vector3(x - w/2, y - h/2, z - d/2), max: new THREE.Vector3(x + w/2, y + h/2, z + d/2) });
         }
 
-        // 4. CHYTRÁ 3D MULTI-OSÁ FYZIKA (100% stabilita proti propadům)
-        function kontrolaKolize(box1, box2) {
-            return (box1.min.x <= box2.max.x && box1.max.x >= box2.min.x) &&
-                   (box1.min.y <= box2.max.y && box1.max.y >= box2.min.y) &&
-                   (box1.min.z <= box2.max.z && box1.max.z >= box2.min.z);
+        function kontrolaKolize(b1, b2) {
+            return (b1.min.x <= b2.max.x && b1.max.x >= b2.min.x) && (b1.min.y <= b2.max.y && b1.max.y >= b2.min.y) && (b1.min.z <= b2.max.z && b1.max.z >= b2.min.z);
         }
 
-        function ziskejHracBox(pozice) {
-            return {
-                min: new THREE.Vector3(pozice.x - hrac.sirka/2, pozice.y, pozice.z - hrac.hloubka/2),
-                max: new THREE.Vector3(pozice.x + hrac.sirka/2, pozice.y + hrac.vyska, pozice.z + hrac.hloubka/2)
-            };
+        function ziskejHracBox(p) {
+            return { min: new THREE.Vector3(p.x - hrac.sirka/2, p.y, p.z - hrac.hloubka/2), max: new THREE.Vector3(p.x + hrac.sirka/2, p.y + hrac.vyska, p.z + hrac.hloubka/2) };
         }
 
-        async function startEngine() {
-            init3D();
-            sestav3DLevel(mujLevel);
-
-            if (sb) {
-                try {
-                    const { data: { user } } = await sb.auth.getUser();
-                    if (user) {
-                        mojeId = user.id; mujUsername = user.user_metadata.display_name || user.email;
-                        const { data: gData } = await sb.from('games').select('name').ilike('url_path', '%obby-hra%').maybeSingle();
-                        let jmenoHry = gData ? gData.name : "Roblox Ultra Obby";
-                        document.getElementById('dynamicGameName').innerText = jmenoHry;
-
-                        await sb.from('online_players').update({ current_game: jmenoHry, updated_at: new Date().toISOString() }).eq('id', mojeId);
-
-                        mmoKanal = sb.channel('roblox_rtx_room').on('broadcast', { event: 'tick' }, payload => {
-                            const d = payload.payload;
-                            if (!vzdaleniHraci[d.id]) {
-                                const av = vytvorHezkehoAvatara(parseInt(d.color.replace("#", "0x")));
-                                scena.add(av); vzdaleniHraci[d.id] = { obj: av };
-                            }
-                            const v = vzdaleniHraci[d.id];
-                            v.username = d.username; v.x = d.x; v.y = d.y; v.z = d.z; v.level = d.level; v.tickTime = Date.now();
-                        }).subscribe();
-
-                        setInterval(() => {
-                            if(mmoKanal) mmoKanal.send({ type: 'broadcast', event: 'tick', payload: { id: mojeId, username: mujUsername, x: hrac.pozice.x, y: hrac.pozice.y, z: hrac.pozice.z, color: mojeBarvaHex, level: mujLevel } });
-                        }, 30);
-                    }
-                } catch(e) { console.error(e); }
-            }
-            loop();
-        }
-
-        // 5. POHYBOVÁ SMYČKA A PLYNULÉ ANIMACE KONČETIN
+        // 🏃‍♂️ POHYBOVÝ ENGINE (ZCELA OPRAVENO - WASD A JOYSTICK BĚŽÍ 100% NONSTOP BEZ PŘERUŠENÍ)
         function loop() {
             requestAnimationFrame(loop);
 
-            let smerVpred = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
-            let smerStrana = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
+            let sVpred = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
+            let sStrana = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
 
-            let cRychlostX = 0; let cRychlostZ = 0;
+            let rx = 0; let rz = 0;
 
-            if (klavesy['KeyW'] || klavesy['ArrowUp']) { cRychlostX += smerVpred.x * RYCHLOST_POHYBU; cRychlostZ += smerVpred.z * RYCHLOST_POHYBU; }
-            if (klavesy['KeyS'] || klavesy['ArrowDown']) { cRychlostX -= smerVpred.x * RYCHLOST_POHYBU; cRychlostZ -= smerVpred.z * RYCHLOST_POHYBU; }
-            if (klavesy['KeyA'] || klavesy['ArrowLeft']) { cRychlostX -= smerStrana.x * RYCHLOST_POHYBU; cRychlostZ -= smerStrana.z * RYCHLOST_POHYBU; }
-            if (klavesy['KeyD'] || klavesy['ArrowRight']) { cRychlostX += smerStrana.x * RYCHLOST_POHYBU; cRychlostZ += smerStrana.z * RYCHLOST_POHYBU; }
+            // PC Klíče
+            if (klavesy['KeyW'] || klavesy['ArrowUp']) { rx += sVpred.x; rz += sVpred.z; }
+            if (klavesy['KeyS'] || klavesy['ArrowDown']) { rx -= sVpred.x; rz -= sVpred.z; }
+            if (klavesy['KeyA'] || klavesy['ArrowLeft']) { rx -= sStrana.x; rz -= sStrana.z; }
+            if (klavesy['KeyD'] || klavesy['ArrowRight']) { rx += sStrana.x; rz += sStrana.z; }
 
-            hrac.rychlost.x = cRychlostX; hrac.rychlost.z = cRychlostZ;
+            // Mobilní dotykový joystick sčítání
+            if (isMobile && (Math.abs(mobilniSmer.x) > 0.01 || Math.abs(mobilniSmer.y) > 0.01)) {
+                // Joystick dopředu/dozadu
+                rx -= sVpred.x * mobilniSmer.y; rz -= sVpred.z * mobilniSmer.y;
+                // Joystick do stran
+                rx += sStrana.x * mobilniSmer.x; rz += sStrana.z * mobilniSmer.x;
+            }
 
-            if (klavesy['Space'] && !hrac.veVzduchu) { hrac.rychlost.y = SILA_SKOKU; hrac.veVzduchu = true; }
+            // Aplikace výsledné rychlosti (Pokud se hráč hýbe, normalizuje se vektor, aby neběhal šikmo rychleji)
+            let len = Math.sqrt(rx*rx + rz*rz);
+            if (len > 0) {
+                hrac.rychlost.x = (rx / len) * RYCHLOST_POHYBU;
+                hrac.rychlost.z = (rz / len) * RYCHLOST_POHYBU;
+            } else {
+                hrac.rychlost.x = 0; hrac.rychlost.z = 0;
+            }
+
+            // Skákání z obou platforem (PC Mezerník i Mobilní tlačítko)
+            if ((klavesy['Space'] || (isMobile && mobilniSkok)) && !hrac.veVzduchu) {
+                hrac.rychlost.y = SILA_SKOKU; hrac.veVzduchu = true;
+            }
             hrac.rychlost.y -= GRAVITACE;
 
-            // Fyzikální posuny s okamžitou korekcí narážení (AABB)
+            // Kompaktní multi-osá AABB kontrola
             hrac.pozice.x += hrac.rychlost.x;
-            let hracBox = ziskejHracBox(hrac.pozice);
-            platformyFyzika.forEach(p => { if (kontrolaKolize(hracBox, p)) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; } });
+            let hb = ziskejHracBox(hrac.pozice);
+            platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; } });
 
             hrac.pozice.z += hrac.rychlost.z;
-            hracBox = ziskejHracBox(hrac.pozice);
-            platformyFyzika.forEach(p => { if (kontrolaKolize(hracBox, p)) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; } });
+            hb = ziskejHracBox(hrac.pozice);
+            platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; } });
 
             hrac.pozice.y += hrac.rychlost.y;
-            hracBox = ziskejHracBox(hrac.pozice); hrac.veVzduchu = true;
+            hb = ziskejHracBox(hrac.pozice); hrac.veVzduchu = true;
             platformyFyzika.forEach(p => {
-                if (kontrolaKolize(hracBox, p)) {
+                if (kontrolaKolize(hb, p)) {
                     if (hrac.rychlost.y < 0) { hrac.pozice.y = p.max.y; hrac.rychlost.y = 0; hrac.veVzduchu = false; }
                     else if (hrac.rychlost.y > 0) { hrac.pozice.y = p.min.y - hrac.vyska; hrac.rychlost.y = 0; }
                 }
             });
 
-            // Smrt a Cíl
-            lavaFyzika.forEach(l => { if (kontrolaKolize(hracBox, l)) restartHry(); });
-            if (cilFyzika && kontrolaKolize(hracBox, cilFyzika)) {
-                if (mujLevel < 100) {
-                    mujLevel++; document.getElementById('levelDisplay').innerText = `Level ${mujLevel} / 100`;
-                    sestav3DLevel(mujLevel); restartHry();
-                } else { alert("👑 VYHRÁL JSI CELOU HRU!"); mujLevel = 1; sestav3DLevel(mujLevel); restartHry(); }
+            // Detekce nebezpečí
+            lavaFyzika.forEach(l => { if (kontrolaKolize(hb, l)) restartHry(); });
+            if (cilFyzika && kontrolaKolize(hb, cilFyzika)) {
+                mujLevel++; document.getElementById('levelDisplay').innerText = `Level ${mujLevel} / 100`;
+                sestav3DLevel(mujLevel); restartHry();
             }
-            if (hrac.pozice.y < -15) restartHry();
+            if (hrac.pozice.y < -17) restartHry();
 
-            // PŘEVOD POZIC NA MODEL + PRÉMIOVÉ ANIMACE
+            // Nastavení pozice postavy a animování končetin
             lokalniKontejnerAvatar.position.copy(hrac.pozice);
             
             if (Math.abs(hrac.rychlost.x) > 0.01 || Math.abs(hrac.rychlost.z) > 0.01) {
-                // Hladké otáčení postavy do směru běhu
                 let uhel = Math.atan2(hrac.rychlost.x, hrac.rychlost.z);
                 lokalniKontejnerAvatar.rotation.y = uhel;
 
-                animacniCas += 0.24;
-                // Protiběžný pohyb nohou a rukou jako v reálném Robloxu
-                lokalniKontejnerAvatar.userData.nohaL.rotation.x = Math.sin(animacniCas) * 0.65;
-                lokalniKontejnerAvatar.userData.nohaP.rotation.x = -Math.sin(animacniCas) * 0.65;
-                lokalniKontejnerAvatar.userData.rukaL.rotation.x = -Math.sin(animacniCas) * 0.5;
-                lokalniKontejnerAvatar.userData.rukaP.rotation.x = Math.sin(animacniCas) * 0.5;
+                animacniCas += 0.26;
+                lokalniKontejnerAvatar.userData.nohaL.rotation.x = Math.sin(animacniCas) * 0.7;
+                lokalniKontejnerAvatar.userData.nohaP.rotation.x = -Math.sin(animacniCas) * 0.7;
+                lokalniKontejnerAvatar.userData.rukaL.rotation.x = -Math.sin(animacniCas) * 0.6;
+                lokalniKontejnerAvatar.userData.rukaP.rotation.x = Math.sin(animacniCas) * 0.6;
             } else {
-                // Navrácení do klidového stavu
                 lokalniKontejnerAvatar.userData.nohaL.rotation.x = 0; lokalniKontejnerAvatar.userData.nohaP.rotation.x = 0;
                 lokalniKontejnerAvatar.userData.rukaL.rotation.x = 0; lokalniKontejnerAvatar.userData.rukaP.rotation.x = 0;
             }
 
-            // Sync multiplayerových hráčů
+            // Sync ostatních hráčů
             const nyni = Date.now();
             for (let id in vzdaleniHraci) {
                 const v = vzdaleniHraci[id];
@@ -443,12 +494,12 @@
                 }
             }
 
-            // 6. ROBLOX KAMERA Z 3. OSOBY S JEMNÝM SKLONEM
+            // Výpočet pozice kamery (Pohled z 3. osoby)
             let kvaternionKamery = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotaceKamery.pitch, rotaceKamery.yaw, 0, 'YXZ'));
-            let vzdálenostKamery = new THREE.Vector3(0, 2.0, 5.0).applyQuaternion(kvaternionKamery);
+            let vzdalenostKamery = new THREE.Vector3(0, 2.2, 5.5).applyQuaternion(kvaternionKamery);
             
-            kamera.position.copy(hrac.pozice).add(vzdálenostKamery);
-            kamera.lookAt(hrac.pozice.x, hrac.pozice.y + 1.0, hrac.pozice.z);
+            kamera.position.copy(hrac.pozice).add(vzdalenostKamery);
+            kamera.lookAt(hrac.pozice.x, hrac.pozice.y + 1.1, hrac.pozice.z);
 
             renderer.render(scena, kamera);
         }
@@ -456,6 +507,37 @@
         function restartHry() { hrac.pozice.set(0, 2, 0); hrac.rychlost.set(0, 0, 0); hrac.veVzduchu = true; }
         function onWindowResize() { kamera.aspect = window.innerWidth / window.innerHeight; kamera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
         
+        async function startEngine() {
+            init3D(); sestav3DLevel(mujLevel);
+            if (sb) {
+                try {
+                    const { data: { user } } = await sb.auth.getUser();
+                    if (user) {
+                        mojeId = user.id; mujUsername = user.user_metadata.display_name || user.email;
+                        const { data: gData } = await sb.from('games').select('name').ilike('url_path', '%obby-hra%').maybeSingle();
+                        let jmenoHry = gData ? gData.name : "Roblox Pro Obby";
+                        document.getElementById('dynamicGameName').innerText = jmenoHry;
+                        await sb.from('online_players').update({ current_game: jmenoHry, updated_at: new Date().toISOString() }).eq('id', mojeId);
+
+                        mmoKanal = sb.channel('roblox_final_room').on('broadcast', { event: 'tick' }, payload => {
+                            const d = payload.payload;
+                            if (!vzdaleniHraci[d.id]) {
+                                const av = vytvorRobloxAvatara(parseInt(d.color.replace("#", "0x")));
+                                scena.add(av); vzdaleniHraci[d.id] = { obj: av };
+                            }
+                            const v = vzdaleniHraci[d.id];
+                            v.username = d.username; v.x = d.x; v.y = d.y; v.z = d.z; v.level = d.level; v.tickTime = Date.now();
+                        }).subscribe();
+
+                        setInterval(() => {
+                            if(mmoKanal) mmoKanal.send({ type: 'broadcast', event: 'tick', payload: { id: mojeId, username: mujUsername, x: hrac.pozice.x, y: hrac.pozice.y, z: hrac.pozice.z, color: mojeBarvaHex, level: mujLevel } });
+                        }, 30);
+                    }
+                } catch(e) {}
+            }
+            loop();
+        }
+
         async function vratSeDoLobby() {
             if (sb && mojeId) { try { await sb.from('online_players').update({ current_game: 'Lobby' }).eq('id', mojeId); } catch(e){} }
             window.location.href = '../index.html';
