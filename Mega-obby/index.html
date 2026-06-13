@@ -2,8 +2,8 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netorikaraft - Mega Obby</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Netorikaraft - 100 Level MMO Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -11,103 +11,109 @@
 
     <style>
         :root {
-            --bg-main: #0d0e12;
-            --bg-nav: #161920;
+            --bg-nav: rgba(22, 25, 32, 0.85);
             --accent: #3b82f6;
             --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
             --danger: #ef4444;
             --danger-hover: #dc2626;
         }
 
-        body {
-            margin: 0;
-            background: var(--bg-main);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
-        /* --- NOVÝ ROBLOX-STYLE HEADER --- */
-        #gameHeader {
+        body, html {
+            margin: 0;
+            padding: 0;
             width: 100%;
-            padding: 14px 24px;
+            height: 100%;
+            overflow: hidden;
+            background: #0d0e12;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* FULLSCREEN CANVAS */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+        }
+
+        /* HORNÍ LIŠTA */
+        #gameHeader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 24px;
             background: var(--bg-nav);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-sizing: border-box;
-            border-bottom: 1px solid #202430;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
-        .brand-zone {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            font-size: 1.6rem;
-            line-height: 1;
-        }
-
-        .brand-name {
-            font-weight: 700;
-            font-size: 1.3rem;
-            letter-spacing: -0.5px;
-        }
-
-        .game-tag {
-            background: #202430;
-            color: var(--accent);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
+        .brand-zone { display: flex; align-items: center; gap: 12px; color: var(--text-main); }
+        .logo-icon { font-size: 1.4rem; }
+        .brand-name { font-weight: 700; font-size: 1.1rem; }
+        .game-tag { background: #202430; color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+        .level-tag { background: #10b981; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
 
         .btn-leave {
             background: var(--danger);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: background 0.2s, transform 0.1s;
         }
+        .btn-leave:hover { background: var(--danger-hover); }
+        .btn-leave:active { transform: scale(0.96); }
 
-        .btn-leave:hover {
-            background: var(--danger-hover);
-        }
-        
-        .btn-leave:active {
-            transform: scale(0.96);
-        }
-
-        /* --- CANVAS --- */
-        canvas {
-            background: #161920;
-            display: block;
-            margin-top: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            border: 1px solid #202430;
+        /* MOBILNÍ DOTYKOVÉ OVLÁDÁNÍ */
+        #mobileControls {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            padding: 0 40px;
+            display: none; 
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
         }
 
-        .controls-info {
-            margin-top: 20px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-            background: #161920;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 1px solid #202430;
+        .move-btns { display: flex; gap: 24px; pointer-events: auto; }
+        .action-btns { pointer-events: auto; }
+
+        .joy-btn {
+            width: 75px;
+            height: 75px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+            touch-action: none;
         }
+        .joy-btn:active { background: rgba(59, 130, 246, 0.6); border-color: #3b82f6; }
     </style>
 </head>
 <body>
@@ -116,22 +122,36 @@
         <div class="brand-zone">
             <span class="logo-icon">🚀</span>
             <span class="brand-name">Netorikaraft</span>
-            <span class="game-tag">Útěk z vězení OBBY</span>
+            <span class="game-tag" id="dynamicGameName">Načítání názvu...</span>
+            <span class="level-tag" id="levelDisplay">Level 1 / 100</span>
         </div>
-        <button class="btn-leave" onclick="vratSeDoLobby()">Leave Game</button>
+        <button class="btn-leave" onclick="vratSeDoLobby()">Leave</button>
     </div>
 
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
-    
-    <div class="controls-info">⌨️ <b>Ovládání:</b> Šipky / WASD = pohyb | Mezerník = Skok</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="mobileControls">
+        <div class="move-btns">
+            <div class="joy-btn" id="btnLeft">◀</div>
+            <div class="joy-btn" id="btnRight">▶</div>
+        </div>
+        <div class="action-btns">
+            <div class="joy-btn" id="btnJump" style="width: 85px; height: 85px; font-size: 1.3rem; font-weight: bold;">JUMP</div>
+        </div>
+    </div>
 
     <script>
         // --- SUPABASE CONFIG ---
-        const SUPABASE_URL = "TVOJE_SUPABASE_URL";
-        const SUPABASE_KEY = "TVŮJ_ANON_KEY";
+        const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         
         let sb = null;
         let mojeId = null;
+        let mujUsername = "Hráč";
+        let mojeBarva = "#" + Math.floor(Math.random()*16777215).toString(16); // Unikátní náhodná barva avatara
+        let mujLevel = 1;
+        let mmoKanal = null;
+        let vzdaleniHraci = {};
 
         try {
             if (SUPABASE_URL !== "TVOJE_SUPABASE_URL") {
@@ -142,92 +162,242 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Fyzika a Hráč
+        // Pevné virtuální rozlišení pro zachování férových souřadnic v multiplayeru
+        const V_WIDTH = 1200;
+        const V_HEIGHT = 600;
+
+        // Fyzikální nastavení lokálního hráče
         const hrac = {
-            x: 50, y: 300, sirka: 30, vyska: 30,
-            rychlostX: 0, rychlostY: 0,
-            veVzduchu: false, barva: '#3b82f6'
+            x: 40, y: 350, sirka: 28, vyska: 28,
+            rychlostX: 0, rychlostY: 0, yaX: 0, veVzduchu: false
         };
 
-        const gravitace = 0.5;
-        const treni = 0.8;
+        const gravitace = 0.48;
+        const treni = 0.78;
         const klavesy = {};
+        let isMobile = false;
+        const touchStav = { left: false, right: false, jump: false };
 
-        // Platformy, láva, cíl
-        const platformy = [
-            { x: 0, y: 350, w: 150, h: 50 },
-            { x: 220, y: 300, w: 80, h: 20 },
-            { x: 380, y: 250, w: 80, h: 20 },
-            { x: 540, y: 200, w: 80, h: 20 },
-            { x: 680, y: 150, w: 120, h: 250 }
-        ];
+        // ================= 🎲 PROCEDURÁLNÍ GENERÁTOR 100+ LEVELŮ =================
+        function vygenerujLevel(n) {
+            const pocetSkoku = 5;
+            const startX = 100;
+            const konecX = 1040;
+            const krokX = (konecX - startX) / (pocetSkoku + 1);
+            
+            // Jak roste level, platformy se zužují z 85px na finálních 35px
+            const sirkaPlatformy = Math.max(35, 85 - (n * 0.5));
+            
+            let platformy = [
+                { x: 0, y: 480, w: startX + 40, h: 120 } // Startovní zóna
+            ];
+            
+            // Generování prostředních skoků pomocí deterministického vlnění (sinus/cosinus)
+            for (let i = 1; i <= pocetSkoku; i++) {
+                const x = startX + i * krokX - (sirkaPlatformy / 2);
+                const vlna = Math.sin(n * 2.7 + i * 1.6) * 110 + Math.cos(n * 0.5 + i * 0.9) * 40;
+                let y = 370 + vlna;
+                
+                if (y > 500) y = 500;
+                if (y < 180) y = 180;
+                
+                platformy.push({ x: x, y: y, w: sirkaPlatformy, h: 16 });
+            }
+            
+            // Cílový ostrov
+            platformy.push({ x: konecX, y: 440, w: 200, h: 200 });
+            
+            // Hlavní nebezpečná zóna na dně
+            let lava = [{ x: startX + 40, y: 585, w: konecX - (startX + 40), h: 15 }];
+            
+            // Od 15. levelu generujeme lávové překážky přímo na povrch platforem
+            if (n >= 15) {
+                for (let i = 1; i <= pocetSkoku; i++) {
+                    if ((n + i) % 3 === 0) { // Každá 3. plošinka dostane past
+                        const p = platformy[i];
+                        lava.push({ x: p.x + (p.w / 4), y: p.y - 5, w: p.w / 2, h: 5 });
+                    }
+                }
+            }
+            
+            return {
+                platformy: platformy,
+                lava: lava,
+                cil: { x: konecX + 70, y: 370, w: 45, h: 70 }
+            };
+        }
 
-        const lava = [{ x: 150, y: 380, w: 530, h: 20 }];
-        const cil = { x: 740, y: 100, w: 30, h: 50 };
+        // ================= DETEKCE MOBILU / PC =================
+        function inicializujOvladani() {
+            isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+            if (isMobile) {
+                document.getElementById('mobileControls').style.display = 'flex';
+                
+                const bindTouch = (id, klic) => {
+                    const el = document.getElementById(id);
+                    el.addEventListener('touchstart', (e) => { e.preventDefault(); touchStav[klic] = true; });
+                    el.addEventListener('touchend', (e) => { e.preventDefault(); touchStav[klic] = false; });
+                };
+                bindTouch('btnLeft', 'left');
+                bindTouch('btnRight', 'right');
+                bindTouch('btnJump', 'jump');
+            }
+        }
 
         window.addEventListener('keydown', e => klavesy[e.code] = true);
         window.addEventListener('keyup', e => klavesy[e.code] = false);
 
-        // Ověření stavu v databázi
-        async function overHrace() {
+        // ================= MULTIPLAYER SÍTĚ (SUPABASE REALTIME) =================
+        async function startEngine() {
+            inicializujOvladani();
             if (!sb) return;
+
+            // SOS načtení názvu hry ze Supabase
+            const { data: gameRow } = await sb.from('games').select('name').eq('url_path', '/obby-hra').single();
+            if (gameRow) document.getElementById('dynamicGameName').innerText = gameRow.name;
+
             const { data: { user } } = await sb.auth.getUser();
             if (user) {
                 mojeId = user.id;
-                await sb.from('online_players').update({ current_game: 'Útěk z vězení OBBY', updated_at: new Date().toISOString() }).eq('id', mojeId);
+                mujUsername = user.user_metadata.display_name || user.email;
+                
+                await sb.from('online_players').update({ current_game: gameRow ? gameRow.name : 'Mega Obby', updated_at: new Date().toISOString() }).eq('id', mojeId);
+
+                // Broadcast kanál pro bleskovou výměnu herních pozic
+                mmoKanal = sb.channel('obby_mmo_room', { config: { broadcast: { self: false } } });
+                
+                mmoKanal.on('broadcast', { event: 'tick' }, payload => {
+                    const data = payload.payload;
+                    vzdaleniHraci[data.id] = {
+                        username: data.username, x: data.x, y: data.y, color: data.color, level: data.level, tickTime: Date.now()
+                    };
+                }).subscribe();
+
+                // Smyčka odesílání naší polohy (každých 30ms = super plynulé MMO)
+                setInterval(() => {
+                    if (mmoKanal) {
+                        mmoKanal.send({
+                            type: 'broadcast', event: 'tick',
+                            payload: { id: mojeId, username: mujUsername, x: hrac.x, y: hrac.y, color: mojeBarva, level: mujLevel }
+                        });
+                    }
+                }, 30);
             }
         }
 
-        // AKCE PRO TLAČÍTKO LEAVE
         async function vratSeDoLobby() {
             if (sb && mojeId) {
-                // Přepnutí stavu zpět na Lobby, než odejdeme
                 await sb.from('online_players').update({ current_game: 'Lobby', updated_at: new Date().toISOString() }).eq('id', mojeId);
             }
             window.location.href = '../index.html';
         }
 
-        // Game Loop
-        function aktualizujHru() {
-            if (klavesy['ArrowRight'] || klavesy['KeyD']) hrac.rychlostX = 4;
-            else if (klavesy['ArrowLeft'] || klavesy['KeyA']) hrac.rychlostX = -4;
+        // ================= HERNI SMYČKA A FYZIKA =================
+        function loop() {
+            const lvlData = vygenerujLevel(mujLevel);
+
+            // Výpočet směrů (Klávesnice nebo Mobil)
+            if (klavesy['ArrowRight'] || klavesy['KeyD'] || touchStav.right) hrac.rychlostX = 4.2;
+            else if (klavesy['ArrowLeft'] || klavesy['KeyA'] || touchStav.left) hrac.rychlostX = -4.2;
             else hrac.rychlostX *= treni;
 
-            if ((klavesy['ArrowUp'] || klavesy['Space'] || klavesy['KeyW']) && !hrac.veVzduchu) {
-                hrac.rychlostY = -10; hrac.veVzduchu = true;
+            if ((klavesy['ArrowUp'] || klavesy['Space'] || klavesy['KeyW'] || touchStav.jump) && !hrac.veVzduchu) {
+                hrac.rychlostY = -9.8; hrac.veVzduchu = true;
             }
 
             hrac.rychlostY += gravitace; hrac.x += hrac.rychlostX; hrac.y += hrac.rychlostY;
             hrac.veVzduchu = true;
 
-            platformy.forEach(p => {
+            // Kolize s pevnými platformami
+            lvlData.platformy.forEach(p => {
                 if (hrac.x < p.x + p.w && hrac.x + hrac.sirka > p.x && hrac.y + hrac.vyska > p.y && hrac.y < p.y + p.h) {
                     if (hrac.rychlostY > 0) { hrac.rychlostY = 0; hrac.y = p.y - hrac.vyska; hrac.veVzduchu = false; }
                 }
             });
 
-            lava.forEach(l => {
-                if (hrac.x < l.x + l.w && hrac.x + hrac.sirka > l.x && hrac.y + hrac.vyska > l.y && hrac.y < l.y + l.h) restartHry();
+            // Kolize s vražednou lávou
+            lvlData.lava.forEach(l => {
+                if (hrac.x < l.x + l.w && hrac.x + hrac.sirka > l.x && hrac.y + l.vyska > l.y && hrac.y < l.y + l.h) restartHry();
             });
 
-            if (hrac.x < cil.x + cil.w && hrac.x + hrac.sirka > cil.x && hrac.y + hrac.vyska > cil.y && hrac.y < cil.y + cil.h) {
-                alert("🎉 Výhra! Úspěšně jsi utekl!"); restartHry();
+            // Kolize s cílovou bránou
+            if (hrac.x < lvlData.cil.x + lvlData.cil.w && hrac.x + hrac.sirka > lvlData.cil.x && hrac.y + hrac.vyska > lvlData.cil.y && hrac.y < lvlData.cil.y + lvlData.cil.h) {
+                if (mujLevel < 100) {
+                    mujLevel++;
+                    document.getElementById('levelDisplay').innerText = `Level ${mujLevel} / 100`;
+                    restartHry();
+                } else {
+                    alert("👑 Absolutní vítězství! Prošel jsi všech 100 levelů!");
+                    mujLevel = 1;
+                    document.getElementById('levelDisplay').innerText = `Level 1 / 100`;
+                    restartHry();
+                }
             }
 
-            // Vykreslování grafiky
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#202430'; platformy.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
-            ctx.fillStyle = '#ef4444'; lava.forEach(l => ctx.fillRect(l.x, l.y, l.w, l.h));
-            ctx.fillStyle = '#10b981'; ctx.fillRect(cil.x, cil.y, cil.w, cil.h);
-            ctx.fillStyle = hrac.barva; ctx.fillRect(hrac.x, hrac.y, hrac.sirka, hrac.vyska);
+            if (hrac.y > V_HEIGHT) restartHry();
 
-            requestAnimationFrame(aktualizujHru);
+            render(lvlData);
+            requestAnimationFrame(loop);
         }
 
-        function restartHry() { hrac.x = 50; hrac.y = 300; hrac.rychlostX = 0; hrac.rychlostY = 0; }
+        function restartHry() {
+            hrac.x = 40; hrac.y = 200; hrac.rychlostX = 0; hrac.rychlostY = 0;
+        }
 
-        overHrace();
-        aktualizujHru();
+        // ================= RENDEROVÁNÍ FULLSCREEN SCÉNY =================
+        function render(lvlData) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Škálování scény na fullscreen při zachování logických rozměrů
+            ctx.save();
+            ctx.scale(canvas.width / V_WIDTH, canvas.height / V_HEIGHT);
+
+            // Kreslení platforem
+            ctx.fillStyle = '#161920';
+            lvlData.platformy.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.strokeStyle = '#202430'; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y, p.w, p.h);
+            });
+
+            // Kreslení lávy
+            ctx.fillStyle = '#ef4444';
+            lvlData.lava.forEach(l => ctx.fillRect(l.x, l.y, l.w, l.h));
+
+            // Kreslení cíle
+            ctx.fillStyle = '#10b981'; ctx.fillRect(lvlData.cil.x, lvlData.cil.y, lvlData.cil.w, lvlData.cil.h);
+
+            // VYKRRESLENÍ OSTATNÍCH HRÁČŮ (Multiplayer)
+            const ted = Date.now();
+            for (let id in vzdaleniHraci) {
+                const v = vzdaleniHraci[id];
+                if (ted - v.tickTime > 3000) { delete vzdaleniHraci[id]; continue; } // Timeout odpojení
+
+                // Vykreslíme je pouze pokud bojují ve stejném levelu
+                if (v.level === mujLevel) {
+                    ctx.fillStyle = v.color;
+                    ctx.fillRect(v.x, v.y, hrac.sirka, hrac.vyska);
+
+                    // Jmenovka nad hlavou cizího hráče
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '11px Inter'; ctx.textAlign = 'center';
+                    ctx.fillText(v.username, v.x + hrac.sirka / 2, v.y - 8);
+                }
+            }
+
+            // VYKRESLENÍ LOKÁLNÍHO AVATARA A JMENOVKY
+            ctx.fillStyle = mojeBarva;
+            ctx.fillRect(hrac.x, hrac.y, hrac.sirka, hrac.vyska);
+
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px Inter'; ctx.textAlign = 'center';
+            ctx.fillText(mujUsername, hrac.x + hrac.sirka / 2, hrac.y - 8);
+
+            ctx.restore();
+        }
+
+        startEngine();
+        loop();
     </script>
 </body>
 </html>
