@@ -11,15 +11,16 @@
 
     <style>
         :root {
-            --bg-main: #0d0e12;
-            --bg-card: #161920;
-            --bg-input: #202430;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
+            --bg-main: #0a0b0e;
+            --bg-card: #12141c;
+            --bg-input: #1a1d28;
+            --accent: #00f0ff;
+            --accent-hover: #00b8cc;
             --accent-success: #10b981;
             --accent-success-hover: #059669;
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
+            --glow: 0 0 12px rgba(0, 240, 255, 0.3);
         }
 
         * {
@@ -45,64 +46,70 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            background: radial-gradient(circle at center, #1a1d29 0%, #0a0b0e 100%);
         }
 
         .auth-card {
             background: var(--bg-card);
-            padding: 30px;
-            border-radius: 16px;
+            padding: 40px 30px;
+            border-radius: 20px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
             text-align: center;
+            border: 1px solid #222533;
         }
 
         .auth-card h1 {
-            font-size: 2rem;
+            font-size: 2.2rem;
             margin-bottom: 8px;
             font-weight: 700;
+            color: var(--accent);
+            text-shadow: var(--glow);
         }
 
         .auth-card p {
             color: var(--text-muted);
             font-size: 0.9rem;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 18px;
             text-align: left;
         }
 
         input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 16px;
             background: var(--bg-input);
-            border: 1px solid transparent;
-            border-radius: 8px;
+            border: 1px solid #222533;
+            border-radius: 10px;
             color: var(--text-main);
             font-size: 0.95rem;
+            transition: all 0.2s;
         }
 
-        input:focus { outline: none; border-color: var(--accent); }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow); }
 
         button {
             width: 100%;
-            padding: 12px;
-            background: var(--accent);
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent) 0%, #0077ff 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
+            border-radius: 10px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
         }
 
-        button:hover { background: var(--accent-hover); }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4); }
 
         .switch-auth {
-            margin-top: 16px;
+            margin-top: 20px;
             font-size: 0.85rem;
             color: var(--text-muted);
             cursor: pointer;
@@ -114,68 +121,83 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 24px;
+            padding: 16px 32px;
             background: var(--bg-card);
             position: sticky;
             top: 0;
             z-index: 100;
+            border-bottom: 1px solid #1e2230;
         }
 
-        .logo { font-weight: 700; font-size: 1.4rem; color: #00f0ff; }
+        .logo { font-weight: 800; font-size: 1.6rem; color: var(--accent); text-shadow: var(--glow); letter-spacing: 0.5px; }
 
         .user-badge {
-            font-size: 0.9rem;
-            color: var(--text-muted);
+            font-size: 0.95rem;
+            color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .logout-btn { background: transparent; color: var(--text-muted); padding: 6px 12px; font-size: 0.8rem; border: 1px solid #333; width: auto; }
-        .logout-btn:hover { background: #ff4444; color: white; border-color: transparent; }
+        .logout-btn { background: transparent; color: var(--text-muted); padding: 8px 16px; font-size: 0.85rem; border: 1px solid #222533; width: auto; box-shadow: none; }
+        .logout-btn:hover { background: #ff4444; color: white; border-color: transparent; transform: none; box-shadow: 0 4px 12px rgba(255,68,68,0.3); }
 
         .main-content {
-            max-width: 1200px;
+            max-width: 1300px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 32px 24px;
             display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 24px;
+            grid-template-columns: 1fr 340px;
+            gap: 32px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 950px) {
             .main-content { grid-template-columns: 1fr; }
         }
 
-        .panel-block { background: var(--bg-card); padding: 20px; border-radius: 12px; margin-bottom: 24px; }
-        .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 16px; }
+        .panel-block { background: var(--bg-card); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #1e2230; }
+        .section-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 
-        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
-        .game-card { background: #1e222b; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.2s; }
-        .game-card:hover { transform: translateY(-4px); }
-        .game-thumbnail { width: 100%; aspect-ratio: 1/1; background: #262b37; display: flex; justify-content: center; align-items: center; font-size: 2.3rem; }
-        .game-info { padding: 10px; }
-        .game-name { font-size: 0.9rem; font-weight: 600; }
+        /* Profilová mini karta */
+        .profile-card { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; background: #181b26; padding: 16px; border-radius: 12px; }
+        .profile-avatar { width: 44px; height: 44px; background: var(--accent); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 0.8rem; text-align: center; }
+        .stat-box { background: var(--bg-input); padding: 10px; border-radius: 8px; border: 1px solid #222533; }
 
-        /* Prvky pro seznamy hráčů a přátel */
-        .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
-        .user-item.playable { cursor: pointer; transition: background 0.2s, transform 0.1s; }
-        .user-item.playable:hover { background: #292f3f; transform: scale(1.02); }
+        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .game-card { background: #181b26; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: all 0.25s ease; border: 1px solid transparent; }
+        .game-card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: var(--glow); }
+        .game-thumbnail { width: 100%; aspect-ratio: 16/10; background: #202433; display: flex; justify-content: center; align-items: center; font-size: 2.8rem; }
+        .game-info { padding: 14px; }
+        .game-name { font-size: 1rem; font-weight: 600; }
+
+        /* Seznamy hráčů a přátel */
+        .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #222533; }
+        .user-item.playable { cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+        .user-item.playable:hover { background: #202433; border-color: var(--accent-success); }
         
+        /* Pulzující animace pro kamaráda ve hře */
+        .user-item.playable::after {
+            content: ''; position: absolute; right: 0; top: 0; width: 4px; height: 100%; background: var(--accent-success); animation: pulseSide 1.5s infinite;
+        }
+        @keyframes pulseSide { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
         .user-info-text { display: flex; flex-direction: column; gap: 2px; }
-        .user-name-label { font-weight: 600; font-size: 0.9rem; }
-        .user-status-label { font-size: 0.75rem; color: var(--accent); }
-        .sm-btn { width: auto; padding: 6px 12px; font-size: 0.75rem; border-radius: 6px; font-weight: 600; }
-        .btn-success { background: var(--accent-success); }
+        .user-name-label { font-weight: 600; font-size: 0.95rem; }
+        .user-status-label { font-size: 0.75rem; color: var(--accent); font-weight: 500; }
+        .user-status-label.ingame { color: var(--accent-success); }
+        
+        .sm-btn { width: auto; padding: 8px 16px; font-size: 0.8rem; border-radius: 8px; font-weight: 600; }
+        .btn-success { background: var(--accent-success); box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
         .btn-success:hover { background: var(--accent-success-hover); }
 
-        /* Realtime Chat */
-        .chat-container { display: flex; flex-direction: column; height: 320px; background: var(--bg-card); border-radius: 12px; overflow: hidden; }
-        .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 0.9rem; }
-        .chat-msg { background: var(--bg-input); padding: 8px 12px; border-radius: 8px; }
-        .chat-msg-user { font-weight: 700; color: var(--accent); margin-bottom: 2px; }
-        .chat-input-area { display: flex; gap: 8px; padding: 12px; background: #12141a; }
-        .chat-input-area input { padding: 10px; border-radius: 6px; }
+        /* Globální Chat */
+        .chat-container { display: flex; flex-direction: column; height: 350px; background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid #1e2230; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; }
+        .chat-msg { background: var(--bg-input); padding: 10px 14px; border-radius: 10px; border-top-left-radius: 2px; align-self: flex-start; max-width: 90%; border: 1px solid #222533; }
+        .chat-msg-user { font-weight: 700; color: var(--accent); margin-bottom: 3px; font-size: 0.8rem; }
+        .chat-input-area { display: flex; gap: 10px; padding: 16px; background: #0c0d13; border-top: 1px solid #1e2230; }
+        .chat-input-area input { padding: 12px; border-radius: 8px; }
     </style>
 </head>
 <body>
@@ -219,7 +241,28 @@
 
             <div>
                 <div class="panel-block">
-                    <h2 class="section-title">👥 Přátelé online (Klikni pro připojení)</h2>
+                    <h2 class="section-title">🎮 Můj Profil</h2>
+                    <div class="profile-card">
+                        <div class="profile-avatar">🕹️</div>
+                        <div>
+                            <div style="font-weight: 700;" id="profileName">Hráč</div>
+                            <div style="font-size: 0.75rem; color: var(--accent-success);">● Připojen do Hubu</div>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <div style="font-weight:700; color:var(--accent);" id="statFriendsCount">0</div>
+                            <div style="color:var(--text-muted);">Přátelé Online</div>
+                        </div>
+                        <div class="stat-box">
+                            <div style="font-weight:700; color:var(--accent);" id="statGamesCount">0</div>
+                            <div style="color:var(--text-muted);">Počet Her</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-block">
+                    <h2 class="section-title">👥 Přátelé online</h2>
                     <div id="friendsList"><p style="color:var(--text-muted); font-size:0.85rem;">Nemáš žádné přátele online.</p></div>
                 </div>
 
@@ -227,7 +270,7 @@
                     <h2 class="section-title">🔍 Vyhledat hráče</h2>
                     <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                         <input type="text" id="searchPlayerInput" placeholder="Uživatelské jméno...">
-                        <button id="searchPlayerBtn" class="sm-btn" style="background:var(--accent); padding:0 12px;">Hledat</button>
+                        <button id="searchPlayerBtn" class="sm-btn" style="background:var(--accent); padding:0 12px; width:auto; color:#000;">Hledat</button>
                     </div>
                     <div id="playerSearchResults"></div>
                 </div>
@@ -237,7 +280,7 @@
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
                         <input type="text" id="chatInput" placeholder="Napiš zprávu v lobby...">
-                        <button id="chatSendBtn" style="width: auto; padding: 0 16px;">Poslat</button>
+                        <button id="chatSendBtn" style="width: auto; padding: 0 20px;">Poslat</button>
                     </div>
                 </div>
             </div>
@@ -254,6 +297,7 @@
         let mujUsername = "";
         let chatKanal = null;
         let listHerCache = [];
+        let aktualniUlozenaHra = "Lobby";
 
         try {
             if (SUPABASE_URL && SUPABASE_KEY) {
@@ -263,6 +307,7 @@
             console.error("Chyba inicializace Supabase:", e);
         }
 
+        // Přepínání Login / Registrace
         const switchMode = document.getElementById('switchMode');
         const usernameGroup = document.getElementById('usernameGroup');
         const authTitle = document.getElementById('authTitle');
@@ -312,12 +357,14 @@
             if (user && !error) {
                 mojeId = user.id;
                 mujUsername = user.user_metadata.display_name || user.email;
+                
                 document.getElementById('userDisplay').innerText = mujUsername;
+                document.getElementById('profileName').innerText = mujUsername;
 
                 document.getElementById('authPage').classList.remove('active');
                 document.getElementById('clientPage').classList.add('active');
 
-                // Při zapnutí klientského hubu jsme vždy defaultně v Lobby
+                // Při zapnutí jsme vždy v Lobby
                 await aktualizujMujHerniStav('Lobby', user.email);
 
                 nactiKlientskaData();
@@ -325,28 +372,32 @@
             }
         }
 
-        // --- 🚀 BEZPEČNÁ AKTUALIZACE STAVU NA SUPABASE ---
+        // --- 🚀 AUTOMATICKÁ AKTUALIZACE STAVU ---
         async function aktualizujMujHerniStav(nazevHry, fallbackEmail = "") {
             if (!mojeId || !sb) return;
             
-            const { error } = await sb.from('online_players').upsert({
+            aktualniUlozenaHra = nazevHry;
+
+            await sb.from('online_players').upsert({
                 id: mojeId,
                 username: mujUsername,
                 email: fallbackEmail || undefined,
                 current_game: nazevHry,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'id' });
-
-            if (error) {
-                console.error("Chyba zápisu stavu hry:", error);
-            }
         }
 
-        // --- SPUŠTĚNÍ HRY V NOVÉM TABU (Zajistí neustálý běh stavu) ---
+        // --- 🔁 DETEKCE NÁVRATU DO LOBBY TABU ---
+        // Když hráč zavře záložku s minihrou a vrátí se sem, okamžitě ho to hodí do stavu Lobby
+        window.addEventListener('focus', async () => {
+            if (mojeId && sb && aktualniUlozenaHra !== 'Lobby') {
+                await aktualizujMujHerniStav('Lobby');
+            }
+        });
+
+        // Spuštění hry v nové záložce (Vercel kompatibilní)
         async function spustHru(nazevHry, urlPath) {
-            // Změníme hru v DB, počkáme na potvrzení od Supabase
             await aktualizujMujHerniStav(nazevHry);
-            // Otevřeme hru v novém okně. Lobby zůstane aktivní a dál vysílá tvůj stav!
             window.open(`https://netorikaraft.vercel.app${urlPath}`, '_blank');
         }
 
@@ -357,6 +408,7 @@
             
             if (hry && hry.length > 0) {
                 listHerCache = hry;
+                document.getElementById('statGamesCount').innerText = hry.length;
                 gGrid.innerHTML = "";
                 fGrid.innerHTML = "";
                 hry.forEach((h, index) => {
@@ -407,21 +459,25 @@
             const fListDiv = document.getElementById('friendsList');
 
             if (seznamId.length === 0) {
-                fListDiv.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Zatím nemáš žádné přátele. Najdi je níže!</p>";
+                fListDiv.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Zatím nemáš žádné přátele.</p>";
+                document.getElementById('statFriendsCount').innerText = "0";
                 return;
             }
 
             const { data: onlinePratele } = await sb.from('online_players').select('*').in('id', seznamId);
 
             if (onlinePratele && onlinePratele.length > 0) {
+                document.getElementById('statFriendsCount').innerText = onlinePratele.length;
                 fListDiv.innerHTML = "";
                 onlinePratele.forEach(p => {
                     let joinTlacitkoHtml = "";
                     let itemClass = "user-item";
                     let klikatkoHtml = "";
+                    let statusClass = "user-status-label";
 
                     if (p.current_game !== 'Lobby') {
                         itemClass = "user-item playable";
+                        statusClass = "user-status-label ingame";
                         klikatkoHtml = `onclick="pripojSeKPrateli('${p.current_game}')"`;
                         joinTlacitkoHtml = `<button class="sm-btn btn-success">Join</button>`;
                     }
@@ -430,25 +486,25 @@
                         <div class="${itemClass}" ${klikatkoHtml}>
                             <div class="user-info-text">
                                 <span class="user-name-label">${p.username}</span>
-                                <span class="user-status-label">📍 ${p.current_game}</span>
+                                <span class="${statusClass}">🎮 ${p.current_game}</span>
                             </div>
                             ${joinTlacitkoHtml}
                         </div>`;
                 });
             } else {
+                document.getElementById('statFriendsCount').innerText = "0";
                 fListDiv.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Všichni tvoji přátelé jsou offline.</p>";
             }
         }
 
-        // --- 🔥 100% FUNKČNÍ PŘIPOJENÍ K PŘÍTELI ---
+        // --- 🔗 PŘIPOJENÍ NA KAMARÁDA ---
         async function pripojSeKPrateli(nazevHry) {
             const nalezenaHra = listHerCache.find(h => h.name === nazevHry);
             if (nalezenaHra) {
-                // Aktualizujeme náš stav, počkáme na zápis a otevřeme stejnou hru
                 await aktualizujMujHerniStav(nazevHry);
                 window.open(`https://netorikaraft.vercel.app${nalezenaHra.url_path}`, '_blank');
             } else {
-                alert("Nelze se připojit: Tato hra nebyla nalezena v databázi.");
+                alert("Hra nebyla v databázi nalezena.");
             }
         }
 
@@ -457,7 +513,7 @@
             const vysledkyDiv = document.getElementById('playerSearchResults');
             if(!dotaz) return;
 
-            const { data: hraci, error } = await sb.from('online_players')
+            const { data: hraci } = await sb.from('online_players')
                 .select('*')
                 .ilike('username', `%${dotaz}%`)
                 .not('id', 'eq', mojeId);
@@ -468,11 +524,11 @@
                     vysledkyDiv.innerHTML += `
                         <div class="user-item">
                             <span>${h.username}</span>
-                            <button class="sm-btn" style="background:var(--accent);" onclick="pridejPritele('${h.id}')">Přidat</button>
+                            <button class="sm-btn" style="background:var(--accent); color:#000;" onclick="pridejPritele('${h.id}')">Přidat</button>
                         </div>`;
                 });
             } else {
-                vysledkyDiv.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Žádný aktivní hráč s tímto jménem nebyl nalezen.</p>";
+                vysledkyDiv.innerHTML = "<p style='color:var(--text-muted); font-size:0.85rem;'>Hráč nenalezen.</p>";
             }
         });
 
@@ -484,9 +540,9 @@
             });
 
             if (error) {
-                alert("Tento uživatel již v přátelích figuruje nebo nastala chyba.");
+                alert("Uživatele již máš v přátelích.");
             } else {
-                alert("Hráč přidán do přátel!");
+                alert("Hráč přidán!");
                 document.getElementById('playerSearchResults').innerHTML = "";
                 document.getElementById('searchPlayerInput').value = "";
                 nactiSeznamPratel();
@@ -503,9 +559,7 @@
         }
 
         document.getElementById('chatSendBtn').addEventListener('click', odesliChat);
-        document.getElementById('chatInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') odesliChat();
-        });
+        document.getElementById('chatInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') odesliChat(); });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             if (mojeId && sb) await sb.from('online_players').delete().eq('id', mojeId);
@@ -516,7 +570,6 @@
 
         window.addEventListener('beforeunload', () => {
             if (sb && mojeId) {
-                // Smaže se z online_players pouze pokud úplně zavře záložku s Lobby
                 sb.from('online_players').delete().eq('id', mojeId);
             }
         });
