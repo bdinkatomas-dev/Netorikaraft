@@ -102,7 +102,7 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- 1. SUPABASE & FINÁLNÍ UPDATER STAVU ---
+        // --- 1. CONFIG A UPDATER HRY ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         const NAZEV_TETO_HRY = "Mega Obby";
@@ -111,23 +111,19 @@
         let mpChannel = null;
         let mojeId = "player_" + Math.floor(Math.random() * 1000000);
         let mujUsername = "Hráč";
-        let remotePlayers = {}; // Ostatní hráči v multiplayeru
+        let remotePlayers = {}; 
 
         try {
             sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) { console.error("Chyba Supabase:", e); }
 
-        async function inicializujMultiplayerAUpdater() {
+        async function inicializujHruAUpdater() {
             if(!sb) return;
-            
-            // Získání přihlášeného uživatele z Hubu
             const { data: { user }, error } = await sb.auth.getUser();
-            
             if (user && !error) {
                 mojeId = user.id;
                 mujUsername = user.user_metadata.display_name || user.email;
 
-                // Pomocná funkce pro zápis stavu
                 async function zmenStavHrace(novyStav) {
                     await sb.from('online_players').upsert({
                         id: user.id,
@@ -137,23 +133,17 @@
                     }, { onConflict: 'id' });
                 }
 
-                // Okamžitá změna stavu na "Mega Obby"
                 await zmenStavHrace(NAZEV_TETO_HRY);
-
-                // Pojistky na odchod a návrat do hry
                 window.addEventListener('beforeunload', () => { zmenStavHrace('Lobby'); });
                 window.addEventListener('focus', () => { zmenStavHrace(NAZEV_TETO_HRY); });
             }
 
-            // Připojení real-time multiplayer kanálu (Pohyb hráčů přes Broadcast)
             mpChannel = sb.channel('obby_multiplayer', { config: { broadcast: { self: false } } });
-            
             mpChannel.on('broadcast', { event: 'move' }, payload => {
                 remotePlayers[payload.payload.id] = payload.payload;
                 remotePlayers[payload.payload.id].lastSeen = Date.now();
             }).subscribe();
 
-            // Čištění odpojených hráčů z mapy
             setInterval(() => {
                 const ted = Date.now();
                 for (let id in remotePlayers) {
@@ -162,17 +152,15 @@
                 document.getElementById("playersOnlineCount").innerText = "Hráči v místnosti: " + (Object.keys(remotePlayers).length + 1);
             }, 1000);
         }
-        
-        inicializujMultiplayerAUpdater();
+        inicializujHruAUpdater();
 
-        // --- 2. HERNÍ ENGINE A CANVAS INTERFACE ---
+        // --- 2. CANVAS A GRAFIKA ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            // Detekce mobilních zařízení/malých obrazovek pro zapnutí joysticku
             if(window.innerWidth < 1024 || 'ontouchstart' in window) {
                 document.getElementById("mobileControls").style.display = "flex";
             } else {
@@ -182,7 +170,6 @@
         window.addEventListener("resize", resizeCanvas);
         setTimeout(resizeCanvas, 150);
 
-        // Ovládání Klávesnice
         const keys = { Left: false, Right: false, Up: false };
         window.addEventListener("keydown", (e) => {
             if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = true;
@@ -195,7 +182,6 @@
             if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.Up = false;
         });
 
-        // Parametry Fyziky Hráče
         const player = {
             x: 100, y: 400, vx: 0, vy: 0,
             width: 22, height: 22,
@@ -209,20 +195,18 @@
         let camera = { x: 0, y: 0 };
         let particles = [];
 
-        // --- 3. MATEMATICKÝ GENERÁTOR OBTIŽNOSTI (100 LEVELŮ) ---
+        // --- 3. MATEMATICKÝ GENERÁTOR 100 LEVELŮ ---
         function generujVsechnyLevely() {
             const listLevelu = [];
-            
             for (let i = 0; i < 100; i++) {
                 const platformy = [];
-                // Startovací bezpečná zóna
                 platformy.push({ x: 0, y: 500, w: 250, h: 250, type: 'block', color: '#161925' });
                 
                 let posledniX = 250;
                 let posledniY = 500;
                 
                 const pocetSkoku = 5 + Math.floor(i / 15);
-                const maxSkokDalka = Math.min(135 + (i * 0.85), 210); // Skočitelný limit enginu
+                const maxSkokDalka = Math.min(135 + (i * 0.85), 210);
                 
                 for (let j = 0; j < pocetSkoku; j++) {
                     const dalkaSkoku = 100 + Math.random() * (maxSkokDalka - 100);
@@ -238,24 +222,20 @@
                     if (posledniY > 650) posledniY = 600;
                     if (posledniY < 250) posledniY = 300;
 
-                    // Pravidla pro generování překážek podle obtížnosti levelu
                     if (i > 5 && j === Math.floor(pocetSkoku / 2)) {
-                        typ = 'checkpoint';
-                        barva = '#00ff66';
-                        sirkaPlochy = 50;
+                        typ = 'checkpoint'; barva = '#00ff66'; sirkaPlochy = 50;
                     } else if (i > 12 && Math.random() < 0.24 && j !== pocetSkoku - 1) {
-                        typ = 'lava';
-                        barva = '#ff0055';
-                        sirkaPlochy = Math.max(sirkaPlochy - 10, 35);
-                    } else if (i > i / 2 && Math.random() < 0.2) {
-                        // Přidání mechaniky pohybující se plošiny
+                        typ = 'lava'; barva = '#ff0055'; sirkaPlochy = Math.max(sirkaPlochy - 10, 35);
+                    } else if (i > 15 && Math.random() < 0.25) {
+                        // OPRAVA: Pomalé plošiny (speed: 0.008 - 0.012)
                         platformy.push({
                             x: posledniX, y: posledniY, w: sirkaPlochy, h: 20,
                             type: 'block', color: '#0077ff',
-                            moveY: Math.random() > 0.5 ? 0 : 60,
-                            moveX: Math.random() > 0.5 ? 50 : 0,
-                            speed: 0.02 + (i * 0.0003),
-                            startX: posledniX, startY: posledniY
+                            moveY: Math.random() > 0.5 ? 0 : 50,
+                            moveX: Math.random() > 0.5 ? 55 : 0,
+                            speed: 0.008 + (Math.random() * 0.004),
+                            startX: posledniX, startY: posledniY,
+                            isMoving: true, lastX: posledniX, lastY: posledniY
                         });
                         posledniX += sirkaPlochy;
                         continue;
@@ -265,7 +245,6 @@
                     posledniX += sirkaPlochy;
                 }
 
-                // Cíl (Zlatý Block pro postup dál)
                 platformy.push({ x: posledniX + 80, y: posledniY - 30, w: 160, h: 450, type: 'finish', color: '#ffaa00' });
                 listLevelu.push(platformy);
             }
@@ -298,7 +277,7 @@
 
         nactiLevel(0);
 
-        // --- 4. MOBILNÍ DOTYKOVÉ ROZHRANÍ ---
+        // --- 4. MOBILNÍ OVLÁDÁNÍ ---
         const joyBound = document.getElementById("joystickBound");
         const joyThumb = document.getElementById("joystickThumb");
         const jumpBtn = document.getElementById("jumpBtn");
@@ -325,13 +304,13 @@
             else { keys.Left = false; keys.Right = false; }
         });
 
-        const vypniJoystick = () => {
+        const resetJoy = () => {
             joyActive = false;
             joyThumb.style.transform = "translateX(0px)";
             keys.Left = false; keys.Right = false;
         };
-        joyBound.addEventListener("touchend", vypniJoystick);
-        joyBound.addEventListener("touchcancel", vypniJoystick);
+        joyBound.addEventListener("touchend", resetJoy);
+        joyBound.addEventListener("touchcancel", resetJoy);
 
         jumpBtn.addEventListener("touchstart", (e) => { keys.Up = true; });
         jumpBtn.addEventListener("touchend", () => { keys.Up = false; });
@@ -345,29 +324,49 @@
             }
         }
 
-        // --- 5. LOGICKÁ SMYČKA FILTRU A POHYBU ---
+        // --- 5. LOGICKÁ SMYČKA (OPRAVENÁ FYZIKA PLOŠIN) ---
         let lastBroadcast = 0;
         function update() {
-            // Horizontální zrychlení
             if (keys.Left) { if (player.vx > -player.maxVx) player.vx -= player.speed; }
             if (keys.Right) { if (player.vx < player.maxVx) player.vx += player.speed; }
             player.vx *= player.friction;
             player.vy += player.gravity;
 
-            // Skok
             if (keys.Up && player.grounded) {
                 player.vy = player.jumpForce;
                 player.grounded = false;
                 vytvorCastice(player.x + player.width/2, player.y + player.height, "#00f0ff", 6);
             }
-            player.grounded = false;
-
-            // Aktualizace pozic pohyblivých platforem
+            
+            let standingOnPlatform = null;
             const aktPlosiny = megaLevels[currentLevel];
+
+            // Nejdřív pohneme všemi plošinami a spočítáme jejich přesný posun (Delta)
             aktPlosiny.forEach(p => {
-                if (p.moveX) p.x = p.startX + Math.sin(Date.now() * p.speed) * p.moveX;
-                if (p.moveY) p.y = p.startY + Math.sin(Date.now() * p.speed) * p.moveY;
+                if (p.isMoving) {
+                    p.lastX = p.x;
+                    p.lastY = p.y;
+                    if (p.moveX) p.x = p.startX + Math.sin(Date.now() * p.speed) * p.moveX;
+                    if (p.moveY) p.y = p.startY + Math.sin(Date.now() * p.speed) * p.moveY;
+                    p.deltaX = p.x - p.lastX;
+                    p.deltaY = p.y - p.lastY;
+                }
             });
+
+            // Kontrola, zda hráč stál na pohyblivé plošině v minulém snímku
+            aktPlosiny.forEach(p => {
+                if (p.isMoving && player.x + player.width > p.lastX && player.x < p.lastX + p.w && Math.abs((player.y + player.height) - p.lastY) < 4) {
+                    standingOnPlatform = p;
+                }
+            });
+
+            // Pokud stojíme na hýbající se plošině, plynule převezmeme její pohyb (Zabraňuje bugování do textury!)
+            if (standingOnPlatform) {
+                player.x += standingOnPlatform.deltaX;
+                player.y += standingOnPlatform.deltaY;
+            }
+
+            player.grounded = false;
 
             // Kolizní detekce osa X
             player.x += player.vx;
@@ -386,33 +385,35 @@
             aktPlosiny.forEach(p => {
                 if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
                     if (p.type === 'block') {
-                        if (player.vy > 0) { player.y = p.y - player.height; player.vy = 0; player.grounded = true; }
-                        else if (player.vy < 0) { player.y = p.y + p.h; player.vy = 0; }
+                        if (player.vy > 0) { 
+                            player.y = p.y - player.height; 
+                            player.vy = 0; 
+                            player.grounded = true; 
+                        }
+                        else if (player.vy < 0) { 
+                            player.y = p.y + p.h; 
+                            player.vy = 0; 
+                        }
                     }
                     if (p.type === 'lava') restartNaCheckpoint();
                     if (p.type === 'checkpoint' && checkpoint.x !== p.x + 15) {
-                        checkpoint = { x: p.x + 15, y: p.y - 40 };
-                        p.color = "#00ffcc";
+                        checkpoint = { x: p.x + 15, y: p.y - 40 }; p.color = "#00ffcc";
                         vytvorCastice(p.x + p.w/2, p.y, "#00ffcc", 10);
                     }
                     if (p.type === 'finish') nactiLevel(currentLevel + 1);
                 }
             });
 
-            // Pád do voidu
             if (player.y > canvas.height + 400) restartNaCheckpoint();
 
-            // Plynulá interpolace kamery (Lerp)
             camera.x += (player.x - canvas.width / 3 - camera.x) * 0.08;
             camera.y += (player.y - canvas.height / 1.8 - camera.y) * 0.08;
 
-            // Částice rozpadu
             particles.forEach((pt, idx) => {
                 pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 0.02;
                 if(pt.alpha <= 0) particles.splice(idx, 1);
             });
 
-            // Síťový vysílač polohy pro ostatní hráče (Zpomaleno na 45ms kvůli šetření limitů databáze)
             let ted = Date.now();
             if (mpChannel && ted - lastBroadcast > 45) {
                 mpChannel.send({
@@ -424,28 +425,26 @@
             }
         }
 
-        // --- 6. SCI-FI NEONOVÉ RENDROVÁNÍ ---
+        // --- 6. NEON RENDERING ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Mřížka na pozadí (Cyberpunk styl)
             ctx.strokeStyle = "#0e1017"; ctx.lineWidth = 1;
-            let mrizaSize = 60;
-            let sX = Math.floor(camera.x / mrizaSize) * mrizaSize;
-            let sY = Math.floor(camera.y / mrizaSize) * mrizaSize;
-            for (let x = sX; x < sX + canvas.width + mrizaSize; x += mrizaSize) {
+            let mriza = 60;
+            let sX = Math.floor(camera.x / mriza) * mriza;
+            let sY = Math.floor(camera.y / mriza) * mriza;
+            for (let x = sX; x < sX + canvas.width + mriza; x += mriza) {
                 ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, canvas.height); ctx.stroke();
             }
-            for (let y = sY; y < sY + canvas.height + mrizaSize; y += mrizaSize) {
+            for (let y = sY; y < sY + canvas.height + mriza; y += mriza) {
                 ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(canvas.width, y - camera.y); ctx.stroke();
             }
 
             ctx.save();
             ctx.translate(-camera.x, -camera.y);
 
-            // Kreslení všech platforem v levelu
             megaLevels[currentLevel].forEach(p => {
-                ctx.shadowBlur = (p.type !== 'block') ? 12 : 0;
+                ctx.shadowBlur = (p.type !== 'block' || p.isMoving) ? 12 : 0;
                 ctx.shadowColor = p.color;
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
@@ -453,7 +452,6 @@
                 ctx.fill();
             });
 
-            // Kreslení efektů částic
             ctx.shadowBlur = 8;
             particles.forEach(pt => {
                 ctx.shadowColor = pt.color; ctx.fillStyle = pt.color; ctx.globalAlpha = pt.alpha;
@@ -461,42 +459,26 @@
             });
             ctx.globalAlpha = 1;
 
-            // Kreslení MULTIPLAYER SPOLUHRÁČŮ
             for (let id in remotePlayers) {
                 let pR = remotePlayers[id];
                 if (pR.lvl === currentLevel) {
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = "#ff00ff";
-                    ctx.fillStyle = "rgba(255, 0, 255, 0.7)"; // Fialový model pro ostatní lidi online
-                    ctx.beginPath();
-                    ctx.roundRect(pR.x, pR.y, 22, 22, 5);
-                    ctx.fill();
+                    ctx.shadowBlur = 10; ctx.shadowColor = "#ff00ff";
+                    ctx.fillStyle = "rgba(255, 0, 255, 0.7)";
+                    ctx.beginPath(); ctx.roundRect(pR.x, pR.y, 22, 22, 5); ctx.fill();
 
-                    // Jmenovka nad hlavou spoluhráče
-                    ctx.shadowBlur = 0;
-                    ctx.fillStyle = "#9ca3af";
-                    ctx.font = "11px Arial";
-                    ctx.textAlign = "center";
+                    ctx.shadowBlur = 0; ctx.fillStyle = "#9ca3af"; ctx.font = "11px Arial"; ctx.textAlign = "center";
                     ctx.fillText(pR.name, pR.x + 11, pR.y - 8);
                 }
             }
 
-            // Kreslení Tvého neonového čtverečku (Lokální hráč)
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = player.color;
-            ctx.fillStyle = player.color;
-            ctx.beginPath();
-            ctx.roundRect(player.x, player.y, player.width, player.height, 5);
-            ctx.fill();
+            ctx.shadowBlur = 15; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
+            ctx.beginPath(); ctx.roundRect(player.x, player.y, player.width, player.height, 5); ctx.fill();
 
             ctx.restore();
         }
 
-        // Smyčka hry running 60 FPS
         function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+            update(); draw(); requestAnimationFrame(gameLoop);
         }
         requestAnimationFrame(gameLoop);
     </script>
