@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Multiplayer Obby</title>
+    <title>Netorikaraft - Fixed Multiplayer Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -88,7 +88,7 @@
     <div id="instructions">
         <div class="start-card" id="startCardBtn">
             <h2>SPUSTIT HRU</h2>
-            <p>Klikni pro uzamčení myši. Uvidíš jména hráčů i jejich unikátní barvy!</p>
+            <p>Klikni pro uzamčení myši. Chůze na platformách i skákání plně opraveno!</p>
         </div>
     </div>
 
@@ -142,7 +142,6 @@
             return x - Math.floor(x);
         }
 
-        // Pomocná funkce, která vygeneruje náhodnou hezkou barvu ze jména nebo ID hráče
         function stringToHexColor(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -152,7 +151,6 @@
             return new THREE.Color(`hsl(${hue}, 85%, 55%)`);
         }
 
-        // Funkce, která vyrobí 3D textovou cedulku nad hlavu hráče
         function vytvorJmenovku(text) {
             const canvas = document.createElement('canvas');
             canvas.width = 256;
@@ -174,7 +172,7 @@
             const material = new THREE.SpriteMaterial({ map: textura });
             const sprite = new THREE.Sprite(material);
             sprite.scale.set(2, 0.5, 1);
-            sprite.position.y = 2.0; // Výška nad hlavou avatara
+            sprite.position.y = 2.0;
             return sprite;
         }
 
@@ -205,7 +203,6 @@
             document.addEventListener('mousemove', pohniKamerouPC);
             if (isMobile) setupMobilniOvladani();
 
-            // Můj lokální avatar (Azurová barva)
             lokalniKontejnerAvatar = vytvorKrasnehoAvatara(0x00f0ff);
             scena.add(lokalniKontejnerAvatar);
 
@@ -256,7 +253,6 @@
             document.getElementById('btnJumpMobile').addEventListener('touchend', () => { mobilniSkok = false; });
         }
 
-        // Model avatara, který akceptuje jakoukoli Three.js barvu
         function vytvorKrasnehoAvatara(barvaVstup) {
             const kontejner = new THREE.Group();
             
@@ -265,7 +261,6 @@
             const matHlava = new THREE.MeshLambertMaterial({ color: 0xffdbac });
             const matOci = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-            // Mikina / Tělo
             const mTelo = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.7, 12), matObleceni);
             mTelo.position.y = 0.85; kontejner.add(mTelo);
             
@@ -371,28 +366,41 @@
                 pX += sStrana.x * mobilniSmer.x; pZ += sStrana.z * mobilniSmer.x;
             }
 
+            // [OPRAVENO]: Rychlost se aplikuje bez ohledu na to, zda stojíme na zemi nebo letíme
             hrac.rychlost.x = pX * RYCHLOST_POHYBU;
             hrac.rychlost.z = pZ * RYCHLOST_POHYBU;
 
             if ((klavesy['Space'] || (isMobile && mobilniSkok)) && !hrac.veVzduchu) {
-                hrac.rychlost.y = SILA_SKOKU; hrac.veVzduchu = true;
+                hrac.rychlost.y = SILA_SKOKU; 
+                hrac.veVzduchu = true;
             }
             hrac.rychlost.y -= GRAVITACE;
 
+            // Pohyb a kolize na ose X
             hrac.pozice.x += hrac.rychlost.x;
             let hb = ziskejHracBox(hrac.pozice);
             platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; } });
 
+            // Pohyb a kolize na ose Z
             hrac.pozice.z += hrac.rychlost.z;
             hb = ziskejHracBox(hrac.pozice);
             platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; } });
 
+            // Pohyb a kolize na ose Y (Vertikální stabilita na plošinách)
             hrac.pozice.y += hrac.rychlost.y;
-            hb = ziskejHracBox(hrac.pozice); hrac.veVzduchu = true;
+            hb = ziskejHracBox(hrac.pozice); 
+            hrac.veVzduchu = true;
+            
             platformyFyzika.forEach(p => {
                 if (kontrolaKolize(hb, p)) {
-                    if (hrac.rychlost.y < 0) { hrac.pozice.y = p.max.y; hrac.rychlost.y = 0; hrac.veVzduchu = false; }
-                    else if (hrac.rychlost.y > 0) { hrac.pozice.y = p.min.y - hrac.vyska; hrac.rychlost.y = 0; }
+                    if (hrac.rychlost.y <= 0) { 
+                        hrac.pozice.y = p.max.y; 
+                        hrac.rychlost.y = 0; 
+                        hrac.veVzduchu = false; // Hráč bezpečně stojí na plošině a nespadne skrz ni
+                    } else if (hrac.rychlost.y > 0) { 
+                        hrac.pozice.y = p.min.y - hrac.vyska; 
+                        hrac.rychlost.y = 0; 
+                    }
                 }
             });
 
@@ -410,6 +418,7 @@
 
             lokalniKontejnerAvatar.position.copy(hrac.pozice);
             
+            // Animace chůze se spouští podle reálné vygenerované rychlosti
             if (Math.abs(hrac.rychlost.x) > 0.01 || Math.abs(hrac.rychlost.z) > 0.01) {
                 lokalniKontejnerAvatar.rotation.y = Math.atan2(hrac.rychlost.x, hrac.rychlost.z);
                 animacniCas += 0.22;
@@ -422,7 +431,6 @@
                 lokalniKontejnerAvatar.userData.rukaL.rotation.x = 0; lokalniKontejnerAvatar.userData.rukaP.rotation.x = 0;
             }
 
-            // [MULTIPLALER AKTUALIZACE]: Zobrazení jmenovek a unikátních barev
             const nyni = Date.now();
             for (let id in vzdaleniHraci) {
                 const v = vzdaleniHraci[id];
@@ -475,11 +483,9 @@
                             if (d.id === mojeId) return;
 
                             if (!vzdaleniHraci[d.id]) {
-                                // 1. Vygeneruje se unikátní barva podle ID hráče
                                 let unikatniBarva = stringToHexColor(d.id);
                                 const av = vytvorKrasnehoAvatara(unikatniBarva);
                                 
-                                // 2. Vytvoří se jmenovka nad hlavu
                                 let jmenovka = vytvorJmenovku(d.username || "Hráč");
                                 av.add(jmenovka);
 
