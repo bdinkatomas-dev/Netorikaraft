@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Stylized Obby</title>
+    <title>Netorikaraft - Multiplayer Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -88,7 +88,7 @@
     <div id="instructions">
         <div class="start-card" id="startCardBtn">
             <h2>SPUSTIT HRU</h2>
-            <p>Klikni pro vstup do světa a uzamčení myši.</p>
+            <p>Klikni pro uzamčení myši. Uvidíš jména hráčů i jejich unikátní barvy!</p>
         </div>
     </div>
 
@@ -142,43 +142,70 @@
             return x - Math.floor(x);
         }
 
+        // Pomocná funkce, která vygeneruje náhodnou hezkou barvu ze jména nebo ID hráče
+        function stringToHexColor(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            let hue = Math.abs(hash % 360);
+            return new THREE.Color(`hsl(${hue}, 85%, 55%)`);
+        }
+
+        // Funkce, která vyrobí 3D textovou cedulku nad hlavu hráče
+        function vytvorJmenovku(text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, 256, 64);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.roundRect(10, 10, 236, 44, 15);
+            ctx.fill();
+            
+            ctx.font = 'bold 24px Inter, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 128, 32);
+
+            const textura = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: textura });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(2, 0.5, 1);
+            sprite.position.y = 2.0; // Výška nad hlavou avatara
+            return sprite;
+        }
+
         function init3D() {
             const container = document.getElementById('gameCanvas');
-            
             scena = new THREE.Scene();
-            scena.background = new THREE.Color(0x1a1c23); // Čisté, tmavé pastelové pozadí
+            scena.background = new THREE.Color(0x1a1c23); 
             scena.fog = new THREE.FogExp2(0x1a1c23, 0.015);
 
             kamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
-            
-            // Standardní, bezpečný renderer (Žádné stíny, žádné těžké post-procesy = 0 % šance na black screen)
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
-            // Příjemné, čisté celoplošné nasvícení modelů
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scena.add(ambientLight);
-            
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
             dirLight.position.set(10, 20, 15);
             scena.add(dirLight);
 
             isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-
             document.getElementById('startCardBtn').addEventListener('click', () => {
-                document.getElementById('instructions').style.display = 'none';
-                if (!isMobile) { container.requestPointerLock(); }
+                if (!isMobile) container.requestPointerLock();
+                else document.getElementById('instructions').style.display = 'none';
             });
 
-            if (!isMobile) {
-                document.addEventListener('mousemove', pohniKamerouPC);
-            } else {
-                setupMobilniOvladani();
-            }
+            document.addEventListener('mousemove', pohniKamerouPC);
+            if (isMobile) setupMobilniOvladani();
 
-            // Vytvoření hezkého stylizovaného avatara
+            // Můj lokální avatar (Azurová barva)
             lokalniKontejnerAvatar = vytvorKrasnehoAvatara(0x00f0ff);
             scena.add(lokalniKontejnerAvatar);
 
@@ -227,61 +254,33 @@
 
             document.getElementById('btnJumpMobile').addEventListener('touchstart', e => { e.preventDefault(); mobilniSkok = true; });
             document.getElementById('btnJumpMobile').addEventListener('touchend', () => { mobilniSkok = false; });
-
-            let rTouchId = null; let rLastX = 0, rLastY = 0;
-            window.addEventListener('touchstart', e => {
-                for(let i=0; i<e.changedTouches.length; i++){
-                    let touch = e.changedTouches[i];
-                    if(touch.clientX > window.innerWidth / 2) { rTouchId = touch.identifier; rLastX = touch.clientX; rLastY = touch.clientY; }
-                }
-            });
-            window.addEventListener('touchmove', e => {
-                for(let i=0; i<e.touches.length; i++){
-                    let touch = e.touches[i];
-                    if(touch.identifier === rTouchId) {
-                        rotaceKamery.yaw -= (touch.clientX - rLastX) * 0.007;
-                        rotaceKamery.pitch -= (touch.clientY - rLastY) * 0.007;
-                        rotaceKamery.pitch = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, rotaceKamery.pitch));
-                        rLastX = touch.clientX; rLastY = touch.clientY;
-                    }
-                }
-            });
-            window.addEventListener('touchend', e => {
-                for(let i=0; i<e.changedTouches.length; i++){ if(e.changedTouches[i].identifier === rTouchId) rTouchId = null; }
-            });
         }
 
-        // HEZKÝ MODEL POSTAVIČKY: Čistý low-poly vzhled (Hladký a barevně vyvážený)
-        function vytvorKrasnehoAvatara(barvaHex) {
+        // Model avatara, který akceptuje jakoukoli Three.js barvu
+        function vytvorKrasnehoAvatara(barvaVstup) {
             const kontejner = new THREE.Group();
             
-            const matTelo = new THREE.MeshLambertMaterial({ color: barvaHex });
-            const matObleceni = new THREE.MeshLambertMaterial({ color: 0x2e3244 });
+            const matObleceni = new THREE.MeshLambertMaterial({ color: barvaVstup });
+            const matTelo = new THREE.MeshLambertMaterial({ color: 0x222530 });
             const matHlava = new THREE.MeshLambertMaterial({ color: 0xffdbac });
             const matOci = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-            // Tělo (Mikina)
+            // Mikina / Tělo
             const mTelo = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.7, 12), matObleceni);
-            mTelo.position.y = 0.85;
-            kontejner.add(mTelo);
+            mTelo.position.y = 0.85; kontejner.add(mTelo);
             
-            // Hlava
             const mHlava = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matHlava);
-            mHlava.position.y = 1.35;
-            kontejner.add(mHlava);
+            mHlava.position.y = 1.35; kontejner.add(mHlava);
 
-            // Oči
             const mOkoL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), matOci);
             mOkoL.position.set(-0.08, 1.38, 0.21); kontejner.add(mOkoL);
             const mOkoP = mOkoL.clone(); mOkoP.position.x = 0.08; kontejner.add(mOkoP);
 
-            // Nohy
             const geoNoha = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
             const mNohaL = new THREE.Mesh(geoNoha, matTelo);
             mNohaL.position.set(-0.16, 0.25, 0); kontejner.add(mNohaL);
             const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.16; kontejner.add(mNohaP);
 
-            // Ruce
             const geoRuka = new THREE.CylinderGeometry(0.09, 0.09, 0.5, 8);
             const mRukaL = new THREE.Mesh(geoRuka, matObleceni);
             mRukaL.position.set(-0.45, 0.85, 0); mRukaL.rotation.z = 0.1; kontejner.add(mRukaL);
@@ -291,7 +290,6 @@
             return kontejner;
         }
 
-        // GENERÁTOR 1-100: Hezké, čisté pastelové plošiny (Všem se generují stejně)
         function sestav3DLevel(levelCislo) {
             platformyFyzika.forEach(p => scena.remove(p.mesh));
             lavaFyzika.forEach(l => scena.remove(l.mesh));
@@ -300,12 +298,10 @@
             platformyFyzika = []; lavaFyzika = [];
             let seed = levelCislo * 777;
 
-            // Hezké, oku lahodící materiály
-            const matStartovni = new THREE.MeshLambertMaterial({ color: 0x3b82f6 }); // Modrá
-            const matLava = new THREE.MeshLambertMaterial({ color: 0xef4444 }); // Jasně červená nebezpečná zóna
-            const matCil = new THREE.MeshLambertMaterial({ color: 0x10b981 }); // Zelená cílová brána
+            const matStartovni = new THREE.MeshLambertMaterial({ color: 0x3b82f6 }); 
+            const matLava = new THREE.MeshLambertMaterial({ color: 0xef4444 }); 
+            const matCil = new THREE.MeshLambertMaterial({ color: 0x10b981 }); 
 
-            // Startovní plošina
             vytvorStylizovanouKostku(0, -0.5, 0, 8, 1, 8, matStartovni, platformyFyzika);
 
             let akt = new THREE.Vector3(0, 0, -4);
@@ -313,34 +309,28 @@
 
             for(let i=1; i<=pocetPrekazek; i++) {
                 let s = 2.6 - (seededRandom(seed++) * 0.6);
-                
                 akt.x += (seededRandom(seed++) - 0.5) * 7.0;
                 akt.y += (seededRandom(seed++) - 0.3) * 1.2;
                 akt.z -= 4.8 + (seededRandom(seed++) * 1.8);
 
-                // Krásné, plynule se měnící pastelové barvy plošin podle čísla levelu
                 let barvaHue = ((levelCislo * 10) + (i * 15)) % 360;
                 let matPlošina = new THREE.MeshLambertMaterial({ color: new THREE.Color(`hsl(${barvaHue}, 75%, 60%)`) });
                 
                 vytvorStylizovanouKostku(akt.x, akt.y - 0.2, akt.z, s, 0.4, s, matPlošina, platformyFyzika);
 
-                // Překážky na plošinách (Láva / Červené kvádry)
                 if (seededRandom(seed++) > 0.65) {
                     vytvorStylizovanouKostku(akt.x, akt.y + 0.15, akt.z, s * 1.02, 0.3, 0.3, matLava, lavaFyzika);
                 }
             }
 
-            // Cílová plošina
             akt.z -= 5.5;
             vytvorStylizovanouKostku(akt.x, akt.y - 0.5, akt.z, 6, 1, 6, matCil, platformyFyzika);
 
-            // Cílový portál
             const mCil = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3.5, 0.3), matCil);
             mCil.position.set(akt.x, akt.y + 1.75, akt.z);
             scena.add(mCil);
             cilFyzika = { mesh: mCil, min: new THREE.Vector3(akt.x-1.25, akt.y, akt.z-0.2), max: new THREE.Vector3(akt.x+1.25, akt.y+3.5, akt.z+0.2) };
 
-            // Spodní záchranná lávová hladina (při pádu dolů)
             const nespodnaLava = new THREE.Mesh(new THREE.BoxGeometry(1000, 1, 1000), matLava);
             nespodnaLava.position.set(akt.x/2, -20, akt.z/2);
             scena.add(nespodnaLava);
@@ -420,17 +410,19 @@
 
             lokalniKontejnerAvatar.position.copy(hrac.pozice);
             
-            // Animace chůze postavičky
             if (Math.abs(hrac.rychlost.x) > 0.01 || Math.abs(hrac.rychlost.z) > 0.01) {
                 lokalniKontejnerAvatar.rotation.y = Math.atan2(hrac.rychlost.x, hrac.rychlost.z);
-                animacniCas += 0.2;
-                lokalniKontejnerAvatar.userData.nohaL.rotation.x = Math.sin(animacniCas) * 0.6;
-                lokalniKontejnerAvatar.userData.nohaP.rotation.x = -Math.sin(animacniCas) * 0.6;
+                animacniCas += 0.22;
+                lokalniKontejnerAvatar.userData.nohaL.rotation.x = Math.sin(animacniCas) * 0.65;
+                lokalniKontejnerAvatar.userData.nohaP.rotation.x = -Math.sin(animacniCas) * 0.65;
+                lokalniKontejnerAvatar.userData.rukaL.rotation.x = -Math.sin(animacniCas) * 0.4;
+                lokalniKontejnerAvatar.userData.rukaP.rotation.x = Math.sin(animacniCas) * 0.4;
             } else {
                 lokalniKontejnerAvatar.userData.nohaL.rotation.x = 0; lokalniKontejnerAvatar.userData.nohaP.rotation.x = 0;
+                lokalniKontejnerAvatar.userData.rukaL.rotation.x = 0; lokalniKontejnerAvatar.userData.rukaP.rotation.x = 0;
             }
 
-            // OSTATNÍ HRÁČI: Vidíš je, pouze pokud jsou na stejném levelu
+            // [MULTIPLALER AKTUALIZACE]: Zobrazení jmenovek a unikátních barev
             const nyni = Date.now();
             for (let id in vzdaleniHraci) {
                 const v = vzdaleniHraci[id];
@@ -459,7 +451,7 @@
                 await sb.from('online_players').upsert({
                     id: mojeId,
                     username: mujUsername,
-                    current_game: 'Stylized OBBY - Lvl ' + mujLevel,
+                    current_game: 'Multiplayer OBBY - Lvl ' + mujLevel,
                     updated_at: new Date().toISOString()
                 });
             }
@@ -474,7 +466,7 @@
                     const { data: { user } } = await sb.auth.getUser();
                     if (user) {
                         mojeId = user.id; 
-                        mujUsername = user.user_metadata.display_name || user.email;
+                        mujUsername = user.user_metadata.display_name || user.email || "Hráč";
                         
                         await aktualizovatLevelVDatabazi();
 
@@ -483,9 +475,16 @@
                             if (d.id === mojeId) return;
 
                             if (!vzdaleniHraci[d.id]) {
-                                // Ostatní hráči dostanou hezkou fialovo-růžovou barvu postavičky
-                                const av = vytvorKrasnehoAvatara(0xff00ff);
-                                scena.add(av); vzdaleniHraci[d.id] = { obj: av, x: d.x, y: d.y, z: d.z };
+                                // 1. Vygeneruje se unikátní barva podle ID hráče
+                                let unikatniBarva = stringToHexColor(d.id);
+                                const av = vytvorKrasnehoAvatara(unikatniBarva);
+                                
+                                // 2. Vytvoří se jmenovka nad hlavu
+                                let jmenovka = vytvorJmenovku(d.username || "Hráč");
+                                av.add(jmenovka);
+
+                                scena.add(av); 
+                                vzdaleniHraci[d.id] = { obj: av, x: d.x, y: d.y, z: d.z };
                             }
                             const v = vzdaleniHraci[d.id];
                             v.x = d.x; v.y = d.y; v.z = d.z; v.level = d.level; v.tickTime = Date.now();
