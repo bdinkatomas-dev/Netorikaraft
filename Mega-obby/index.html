@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Mega Obby 100 Lvl</title>
+    <title>Netorikaraft - Mega Obby</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
@@ -12,6 +12,7 @@
             color: #fff;
             font-family: Arial, sans-serif;
             overflow: hidden;
+            /* Zamezení scrollování a přibližování na mobilu */
             touch-action: none;
         }
         #gameCanvas {
@@ -35,52 +36,55 @@
             text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
             margin-bottom: 5px;
         }
-        /* Mobilní Ovládání */
         #mobileControls {
             position: absolute;
-            bottom: 30px;
+            bottom: 40px;
             left: 0;
             width: 100%;
-            height: 150px;
-            display: none;
+            display: none; /* Zapne se samo na dotykových zařízeních */
             justify-content: space-between;
-            padding: 0 40px;
+            padding: 0 50px;
             pointer-events: none;
             z-index: 10;
         }
         .touch-zone {
             pointer-events: auto;
-            background: rgba(255, 255, 255, 0.07);
-            border: 2px solid rgba(0, 240, 255, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 240, 255, 0.2);
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(5px);
         }
         #joystickBound {
-            width: 110px;
-            height: 110px;
+            width: 130px;
+            height: 130px;
             position: relative;
         }
         #joystickThumb {
-            width: 50px;
-            height: 50px;
-            background: #00f0ff;
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 240, 255, 0.8);
             border-radius: 50%;
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
             position: absolute;
-            top: 28px;
-            left: 28px;
-            transition: transform 0.05s ease;
+            top: 33px;
+            left: 33px;
+            transition: transform 0.05s linear;
         }
         #jumpBtn {
-            width: 100px;
-            height: 100px;
-            font-weight: bold;
-            color: #00f0ff;
-            text-shadow: 0 0 5px #00f0ff;
-            font-size: 1.2rem;
+            width: 110px;
+            height: 110px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px #00f0ff;
+            font-size: 1.3rem;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        #jumpBtn:active {
+            background: rgba(0, 240, 255, 0.4);
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -90,6 +94,7 @@
         <div class="hud-text" id="levelDisplay">Level: 1 / 100</div>
         <div class="hud-text" style="color: #ff0055; text-shadow: 0 0 10px rgba(255, 0, 85, 0.5);" id="deathsDisplay">Smrti: 0</div>
         <div class="hud-text" style="color: #00ff66; font-size: 0.9rem;" id="playersOnlineCount">Hráči v místnosti: 1</div>
+        <button onclick="window.location.href='../'" style="margin-top: 15px; padding: 8px 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; cursor: pointer; pointer-events: auto;">Zpět do Hubu</button>
     </div>
 
     <div id="mobileControls">
@@ -102,40 +107,35 @@
     <canvas id="gameCanvas"></canvas>
 
     <script>
-        // --- 1. CONFIG A UPDATER HRY ---
+        // --- 1. SUPABASE MULTIPLAYER & STATUS ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
-        const NAZEV_TETO_HRY = "Mega Obby";
+        const NAZEV_HRY = "Mega Obby";
 
         let sb = null;
         let mpChannel = null;
-        let mojeId = "player_" + Math.floor(Math.random() * 1000000);
+        let mojeId = "guest_" + Math.floor(Math.random() * 10000);
         let mujUsername = "Hráč";
         let remotePlayers = {}; 
 
-        try {
-            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch(e) { console.error("Chyba Supabase:", e); }
+        try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error(e); }
 
-        async function inicializujHruAUpdater() {
+        async function initMultiplayer() {
             if(!sb) return;
-            const { data: { user }, error } = await sb.auth.getUser();
-            if (user && !error) {
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
                 mojeId = user.id;
-                mujUsername = user.user_metadata.display_name || user.email;
-
-                async function zmenStavHrace(novyStav) {
+                mujUsername = user.user_metadata.display_name || "Hráč";
+                
+                const updateStatus = async (status) => {
                     await sb.from('online_players').upsert({
-                        id: user.id,
-                        username: mujUsername,
-                        current_game: novyStav,
-                        updated_at: new Date().toISOString()
+                        id: mojeId, username: mujUsername, current_game: status, updated_at: new Date().toISOString()
                     }, { onConflict: 'id' });
-                }
-
-                await zmenStavHrace(NAZEV_TETO_HRY);
-                window.addEventListener('beforeunload', () => { zmenStavHrace('Lobby'); });
-                window.addEventListener('focus', () => { zmenStavHrace(NAZEV_TETO_HRY); });
+                };
+                
+                await updateStatus(NAZEV_HRY);
+                setInterval(() => updateStatus(NAZEV_HRY), 10000); // Heartbeat
+                window.addEventListener('beforeunload', () => updateStatus('Lobby'));
             }
 
             mpChannel = sb.channel('obby_multiplayer', { config: { broadcast: { self: false } } });
@@ -145,36 +145,33 @@
             }).subscribe();
 
             setInterval(() => {
-                const ted = Date.now();
+                const now = Date.now();
                 for (let id in remotePlayers) {
-                    if (ted - remotePlayers[id].lastSeen > 3000) delete remotePlayers[id];
+                    if (now - remotePlayers[id].lastSeen > 3000) delete remotePlayers[id];
                 }
                 document.getElementById("playersOnlineCount").innerText = "Hráči v místnosti: " + (Object.keys(remotePlayers).length + 1);
             }, 1000);
         }
-        inicializujHruAUpdater();
+        initMultiplayer();
 
-        // --- 2. CANVAS A GRAFIKA ---
+        // --- 2. HERNÍ ENGINE A CANVAS ---
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
         function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            if(window.innerWidth < 1024 || 'ontouchstart' in window) {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
                 document.getElementById("mobileControls").style.display = "flex";
-            } else {
-                document.getElementById("mobileControls").style.display = "none";
             }
         }
         window.addEventListener("resize", resizeCanvas);
-        setTimeout(resizeCanvas, 150);
+        resizeCanvas();
 
         const keys = { Left: false, Right: false, Up: false };
         window.addEventListener("keydown", (e) => {
             if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = true;
             if(e.code === "ArrowRight" || e.code === "KeyD") keys.Right = true;
-            if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.Up = true;
+            if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") { keys.Up = true; e.preventDefault(); }
         });
         window.addEventListener("keyup", (e) => {
             if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = false;
@@ -182,254 +179,278 @@
             if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.Up = false;
         });
 
+        // Hráč: Vyladěná fyzika (trochu vyšší gravitace pro přesnější skoky)
         const player = {
-            x: 100, y: 400, vx: 0, vy: 0,
-            width: 22, height: 22,
-            speed: 0.75, maxVx: 6.5, friction: 0.85,
-            gravity: 0.52, jumpForce: -11.5,
+            x: 100, y: 300, vx: 0, vy: 0, width: 22, height: 22,
+            speed: 0.85, maxVx: 6.5, friction: 0.82,
+            gravity: 0.6, jumpForce: -12.5,
             grounded: false, deaths: 0, color: "#00f0ff"
         };
 
         let currentLevel = 0;
-        let checkpoint = { x: 100, y: 400 };
+        let checkpoint = { x: 100, y: 300 };
         let camera = { x: 0, y: 0 };
         let particles = [];
 
-        // --- 3. MATEMATICKÝ GENERÁTOR 100 LEVELŮ ---
-        function generujVsechnyLevely() {
-            const listLevelu = [];
+        // --- 3. GENERÁTOR 100 LEVELŮ (RŮZNORODÉ A STŘEDNĚ TĚŽKÉ) ---
+        function generujLevely() {
+            const levels = [];
             for (let i = 0; i < 100; i++) {
-                const platformy = [];
-                platformy.push({ x: 0, y: 500, w: 250, h: 250, type: 'block', color: '#161925' });
+                const platforms = [];
+                // Startovní plocha
+                platforms.push({ x: 0, y: 400, w: 200, h: 200, type: 'block', color: '#161925' });
                 
-                let posledniX = 250;
-                let posledniY = 500;
+                let curX = 200;
+                let curY = 400;
                 
-                const pocetSkoku = 5 + Math.floor(i / 15);
-                const maxSkokDalka = Math.min(135 + (i * 0.85), 210);
+                // Počet skoků roste s levelem (od 5 do 15)
+                const numJumps = 5 + Math.floor(i / 10);
                 
-                for (let j = 0; j < pocetSkoku; j++) {
-                    const dalkaSkoku = 100 + Math.random() * (maxSkokDalka - 100);
-                    const zmenaY = (Math.random() - 0.45) * Math.min(30 + i, 90); 
-                    
-                    let sirkaPlochy = Math.max(90 - (i * 0.5) - (j * 2), 45);
+                for (let j = 0; j < numJumps; j++) {
+                    // Obtížnost: Zmenšování plošin a prodlužování skoků podle levelu 'i'
+                    let platformWidth = Math.max(100 - (i * 0.6), 40);
+                    let gapX = 80 + Math.random() * Math.min(60 + i, 120); 
+                    let gapY = (Math.random() - 0.4) * Math.min(40 + (i * 1.5), 100);
+
+                    curX += gapX;
+                    curY += gapY;
+
+                    // Omezení, aby to neutíkalo mimo obrazovku moc rychle
+                    if (curY > 600) curY = 500;
+                    if (curY < 100) curY = 200;
+
                     let typ = 'block';
                     let barva = '#161925';
-                    
-                    posledniX += dalkaSkoku;
-                    posledniY += zmenaY;
 
-                    if (posledniY > 650) posledniY = 600;
-                    if (posledniY < 250) posledniY = 300;
-
-                    if (i > 5 && j === Math.floor(pocetSkoku / 2)) {
-                        typ = 'checkpoint'; barva = '#00ff66'; sirkaPlochy = 50;
-                    } else if (i > 12 && Math.random() < 0.24 && j !== pocetSkoku - 1) {
-                        typ = 'lava'; barva = '#ff0055'; sirkaPlochy = Math.max(sirkaPlochy - 10, 35);
-                    } else if (i > 15 && Math.random() < 0.25) {
-                        // OPRAVA: Pomalé plošiny (speed: 0.008 - 0.012)
-                        platformy.push({
-                            x: posledniX, y: posledniY, w: sirkaPlochy, h: 20,
-                            type: 'block', color: '#0077ff',
-                            moveY: Math.random() > 0.5 ? 0 : 50,
-                            moveX: Math.random() > 0.5 ? 55 : 0,
-                            speed: 0.008 + (Math.random() * 0.004),
-                            startX: posledniX, startY: posledniY,
-                            isMoving: true, lastX: posledniX, lastY: posledniY
+                    // Speciální plošiny podle levelu
+                    if (j === Math.floor(numJumps / 2) && i > 5) {
+                        typ = 'checkpoint'; barva = '#00ff66'; platformWidth = 60;
+                    } 
+                    else if (i > 10 && Math.random() < 0.25) {
+                        typ = 'lava'; barva = '#ff0055'; platformWidth = Math.max(platformWidth - 10, 30);
+                    } 
+                    else if (i > 20 && Math.random() < 0.3) {
+                        // Pohyblivé plošiny (rychlost roste s levelem)
+                        let speed = 0.01 + (i * 0.0001);
+                        platforms.push({
+                            x: curX, y: curY, w: platformWidth, h: 20, type: 'block', color: '#0077ff',
+                            moveY: Math.random() > 0.5 ? 0 : 60 + (Math.random() * 40),
+                            moveX: Math.random() > 0.5 ? 60 + (Math.random() * 40) : 0,
+                            speed: speed, startX: curX, startY: curY, isMoving: true
                         });
-                        posledniX += sirkaPlochy;
+                        curX += platformWidth;
                         continue;
                     }
 
-                    platformy.push({ x: posledniX, y: posledniY, w: sirkaPlochy, h: 20, type: typ, color: barva });
-                    posledniX += sirkaPlochy;
+                    platforms.push({ x: curX, y: curY, w: platformWidth, h: 20, type: typ, color: barva });
+                    curX += platformWidth;
                 }
 
-                platformy.push({ x: posledniX + 80, y: posledniY - 30, w: 160, h: 450, type: 'finish', color: '#ffaa00' });
-                listLevelu.push(platformy);
+                // Cíl
+                platforms.push({ x: curX + 100, y: curY - 20, w: 150, h: 300, type: 'finish', color: '#ffaa00' });
+                levels.push(platforms);
             }
-            return listLevelu;
+            return levels;
         }
 
-        const megaLevels = generujVsechnyLevely();
+        const megaLevels = generujLevely();
 
-        function restartNaCheckpoint() {
+        function spawnParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 3 + 2, alpha: 1, color
+                });
+            }
+        }
+
+        function restartPlayer() {
+            spawnParticles(player.x + player.width/2, player.y + player.height/2, "#ff0055", 25);
             player.x = checkpoint.x; player.y = checkpoint.y;
             player.vx = 0; player.vy = 0;
-            vytvorCastice(player.x + 11, player.y + 11, "#ff0055", 20);
             player.deaths++;
             document.getElementById("deathsDisplay").innerText = "Smrti: " + player.deaths;
         }
 
-        function nactiLevel(index) {
+        function loadLevel(index) {
             if (index >= 100) {
-                alert("🏆 Konec hry! Prošel jsi všech 100 levelů!");
-                currentLevel = 0; player.deaths = 0;
+                alert("🏆 GRATULACE! Prošel jsi všech 100 levelů a jsi mistr Netorikaraft Obby!");
+                index = 0; player.deaths = 0;
                 document.getElementById("deathsDisplay").innerText = "Smrti: 0";
-            } else { currentLevel = index; }
-            
+            }
+            currentLevel = index;
             document.getElementById("levelDisplay").innerText = `Level: ${currentLevel + 1} / 100`;
-            const plosiny = megaLevels[currentLevel];
-            checkpoint = { x: plosiny[0].x + 35, y: plosiny[0].y - 45 };
+            const lvl = megaLevels[currentLevel];
+            checkpoint = { x: lvl[0].x + 40, y: lvl[0].y - 50 };
             player.x = checkpoint.x; player.y = checkpoint.y;
             player.vx = 0; player.vy = 0;
         }
+        loadLevel(0);
 
-        nactiLevel(0);
-
-        // --- 4. MOBILNÍ OVLÁDÁNÍ ---
+        // --- 4. MOBILNÍ OVLÁDÁNÍ (Vymazlené a přesné) ---
         const joyBound = document.getElementById("joystickBound");
         const joyThumb = document.getElementById("joystickThumb");
         const jumpBtn = document.getElementById("jumpBtn");
         
         let joyActive = false;
-        let joyStartX = 0;
+        let joyCenterX = 0;
+        let joyVal = 0; // -1 to 1
 
         joyBound.addEventListener("touchstart", (e) => {
             joyActive = true;
             const rect = joyBound.getBoundingClientRect();
-            joyStartX = rect.left + rect.width / 2;
+            joyCenterX = rect.left + rect.width / 2;
         });
 
         joyBound.addEventListener("touchmove", (e) => {
             if(!joyActive) return;
-            const t = e.touches[0];
-            let deltaX = t.clientX - joyStartX;
+            const touch = e.touches[0];
+            let deltaX = touch.clientX - joyCenterX;
             
-            deltaX = Math.max(-30, Math.min(30, deltaX));
-            joyThumb.style.transform = `translateX(${deltaX}px)`;
+            // Omezovač kolečka na max 35px výchylku
+            let displayDelta = Math.max(-35, Math.min(35, deltaX));
+            joyThumb.style.transform = `translateX(${displayDelta}px)`;
 
-            if(deltaX < -10) { keys.Left = true; keys.Right = false; }
-            else if(deltaX > 10) { keys.Right = true; keys.Left = false; }
+            // Normalizace pro plynulou rychlost
+            joyVal = displayDelta / 35; 
+            
+            if(joyVal < -0.2) { keys.Left = true; keys.Right = false; }
+            else if(joyVal > 0.2) { keys.Right = true; keys.Left = false; }
             else { keys.Left = false; keys.Right = false; }
         });
 
         const resetJoy = () => {
-            joyActive = false;
+            joyActive = false; joyVal = 0;
             joyThumb.style.transform = "translateX(0px)";
             keys.Left = false; keys.Right = false;
         };
         joyBound.addEventListener("touchend", resetJoy);
         joyBound.addEventListener("touchcancel", resetJoy);
 
-        jumpBtn.addEventListener("touchstart", (e) => { keys.Up = true; });
+        jumpBtn.addEventListener("touchstart", () => { keys.Up = true; });
         jumpBtn.addEventListener("touchend", () => { keys.Up = false; });
+        jumpBtn.addEventListener("touchcancel", () => { keys.Up = false; });
 
-        function vytvorCastice(x, y, color, count) {
-            for(let i=0; i<count; i++) {
-                particles.push({
-                    x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
-                    radius: Math.random() * 3 + 1, alpha: 1, color
-                });
-            }
-        }
-
-        // --- 5. LOGICKÁ SMYČKA (OPRAVENÁ FYZIKA PLOŠIN) ---
+        // --- 5. BULLETPROOF FYZIKA A KOLIZE ---
         let lastBroadcast = 0;
         function update() {
-            if (keys.Left) { if (player.vx > -player.maxVx) player.vx -= player.speed; }
-            if (keys.Right) { if (player.vx < player.maxVx) player.vx += player.speed; }
+            // Aplikace pohybu
+            if (keys.Left) player.vx -= player.speed;
+            if (keys.Right) player.vx += player.speed;
+            
             player.vx *= player.friction;
+            // Limit rychlosti
+            if(player.vx > player.maxVx) player.vx = player.maxVx;
+            if(player.vx < -player.maxVx) player.vx = -player.maxVx;
+            
             player.vy += player.gravity;
 
             if (keys.Up && player.grounded) {
                 player.vy = player.jumpForce;
                 player.grounded = false;
-                vytvorCastice(player.x + player.width/2, player.y + player.height, "#00f0ff", 6);
+                spawnParticles(player.x + player.width/2, player.y + player.height, "#00f0ff", 8);
             }
             
-            let standingOnPlatform = null;
-            const aktPlosiny = megaLevels[currentLevel];
+            const plats = megaLevels[currentLevel];
+            let standingOn = null;
 
-            // Nejdřív pohneme všemi plošinami a spočítáme jejich přesný posun (Delta)
-            aktPlosiny.forEach(p => {
+            // 5a. Aktualizace pohyblivých plošin
+            plats.forEach(p => {
                 if (p.isMoving) {
-                    p.lastX = p.x;
-                    p.lastY = p.y;
+                    p.lastX = p.x; p.lastY = p.y;
                     if (p.moveX) p.x = p.startX + Math.sin(Date.now() * p.speed) * p.moveX;
                     if (p.moveY) p.y = p.startY + Math.sin(Date.now() * p.speed) * p.moveY;
-                    p.deltaX = p.x - p.lastX;
-                    p.deltaY = p.y - p.lastY;
+                    p.dx = p.x - p.lastX;
+                    p.dy = p.y - p.lastY;
+
+                    // Kontrola, jestli hráč stojí na plošině (tolerance 2px)
+                    if (player.y + player.height >= p.lastY && player.y + player.height <= p.lastY + 3 &&
+                        player.x + player.width > p.lastX && player.x < p.lastX + p.w) {
+                        standingOn = p;
+                    }
                 }
             });
 
-            // Kontrola, zda hráč stál na pohyblivé plošině v minulém snímku
-            aktPlosiny.forEach(p => {
-                if (p.isMoving && player.x + player.width > p.lastX && player.x < p.lastX + p.w && Math.abs((player.y + player.height) - p.lastY) < 4) {
-                    standingOnPlatform = p;
-                }
-            });
-
-            // Pokud stojíme na hýbající se plošině, plynule převezmeme její pohyb (Zabraňuje bugování do textury!)
-            if (standingOnPlatform) {
-                player.x += standingOnPlatform.deltaX;
-                player.y += standingOnPlatform.deltaY;
+            // Pokud stojíme, přeneseme rychlost plošiny na hráče PŘED samotným pohybem hráče
+            if (standingOn) {
+                player.x += standingOn.dx;
+                player.y += standingOn.dy;
             }
 
             player.grounded = false;
 
-            // Kolizní detekce osa X
+            // 5b. X-Osa Kolize (AABB)
             player.x += player.vx;
-            aktPlosiny.forEach(p => {
-                if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
+            for(let p of plats) {
+                if (player.x < p.x + p.w && player.x + player.width > p.x && 
+                    player.y < p.y + p.h && player.y + player.height > p.y) {
+                    
+                    if (p.type === 'lava') { restartPlayer(); break; }
+                    
                     if (p.type === 'block') {
                         if (player.vx > 0) player.x = p.x - player.width;
-                        if (player.vx < 0) player.x = p.x + p.w;
+                        else if (player.vx < 0) player.x = p.x + p.w;
+                        player.vx = 0;
                     }
-                    if (p.type === 'lava') restartNaCheckpoint();
                 }
-            });
+            }
 
-            // Kolizní detekce osa Y
+            // 5c. Y-Osa Kolize (AABB)
             player.y += player.vy;
-            aktPlosiny.forEach(p => {
-                if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
+            for(let p of plats) {
+                if (player.x < p.x + p.w && player.x + player.width > p.x && 
+                    player.y < p.y + p.h && player.y + player.height > p.y) {
+                    
+                    if (p.type === 'lava') { restartPlayer(); break; }
+                    
                     if (p.type === 'block') {
-                        if (player.vy > 0) { 
-                            player.y = p.y - player.height; 
-                            player.vy = 0; 
-                            player.grounded = true; 
-                        }
-                        else if (player.vy < 0) { 
-                            player.y = p.y + p.h; 
-                            player.vy = 0; 
+                        if (player.vy > 0) {
+                            player.y = p.y - player.height;
+                            player.vy = 0;
+                            player.grounded = true;
+                        } else if (player.vy < 0) {
+                            player.y = p.y + p.h;
+                            player.vy = 0;
                         }
                     }
-                    if (p.type === 'lava') restartNaCheckpoint();
-                    if (p.type === 'checkpoint' && checkpoint.x !== p.x + 15) {
-                        checkpoint = { x: p.x + 15, y: p.y - 40 }; p.color = "#00ffcc";
-                        vytvorCastice(p.x + p.w/2, p.y, "#00ffcc", 10);
+
+                    if (p.type === 'checkpoint' && checkpoint.x !== p.x + 20) {
+                        checkpoint = { x: p.x + 20, y: p.y - 40 }; p.color = "#00ffcc";
+                        spawnParticles(p.x + p.w/2, p.y, "#00ffcc", 15);
                     }
-                    if (p.type === 'finish') nactiLevel(currentLevel + 1);
+                    if (p.type === 'finish') {
+                        loadLevel(currentLevel + 1);
+                        break;
+                    }
                 }
-            });
+            }
 
-            if (player.y > canvas.height + 400) restartNaCheckpoint();
+            // Pád do prázdna
+            if (player.y > camera.y + canvas.height + 100) restartPlayer();
 
+            // Plynulá Kamera
             camera.x += (player.x - canvas.width / 3 - camera.x) * 0.08;
             camera.y += (player.y - canvas.height / 1.8 - camera.y) * 0.08;
 
+            // Update částic
             particles.forEach((pt, idx) => {
-                pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 0.02;
+                pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 0.03;
                 if(pt.alpha <= 0) particles.splice(idx, 1);
             });
 
-            let ted = Date.now();
-            if (mpChannel && ted - lastBroadcast > 45) {
-                mpChannel.send({
-                    type: 'broadcast',
-                    event: 'move',
-                    payload: { id: mojeId, name: mujUsername, x: player.x, y: player.y, lvl: currentLevel }
-                });
-                lastBroadcast = ted;
+            // Multiplayer Sync (20x za vteřinu)
+            if (mpChannel && Date.now() - lastBroadcast > 50) {
+                mpChannel.send({ type: 'broadcast', event: 'move', payload: { id: mojeId, name: mujUsername, x: player.x, y: player.y, lvl: currentLevel }});
+                lastBroadcast = Date.now();
             }
         }
 
-        // --- 6. NEON RENDERING ---
+        // --- 6. VYKRESLOVÁNÍ (Nádherný Neon) ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = "#0e1017"; ctx.lineWidth = 1;
+            // Dynamická Cyberpunk Mřížka
+            ctx.strokeStyle = "rgba(0, 240, 255, 0.05)"; ctx.lineWidth = 1;
             let mriza = 60;
             let sX = Math.floor(camera.x / mriza) * mriza;
             let sY = Math.floor(camera.y / mriza) * mriza;
@@ -443,35 +464,34 @@
             ctx.save();
             ctx.translate(-camera.x, -camera.y);
 
+            // Vykreslení plošin
             megaLevels[currentLevel].forEach(p => {
-                ctx.shadowBlur = (p.type !== 'block' || p.isMoving) ? 12 : 0;
-                ctx.shadowColor = p.color;
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.roundRect(p.x, p.y, p.w, p.h, p.type === 'block' ? 5 : 0);
-                ctx.fill();
+                ctx.shadowBlur = (p.type !== 'block' || p.isMoving) ? 15 : 0;
+                ctx.shadowColor = p.color; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 4); ctx.fill();
             });
 
-            ctx.shadowBlur = 8;
+            // Částice
+            ctx.shadowBlur = 10;
             particles.forEach(pt => {
                 ctx.shadowColor = pt.color; ctx.fillStyle = pt.color; ctx.globalAlpha = pt.alpha;
                 ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
+            // Multiplayer Hráči (Fialoví duchové)
             for (let id in remotePlayers) {
-                let pR = remotePlayers[id];
-                if (pR.lvl === currentLevel) {
-                    ctx.shadowBlur = 10; ctx.shadowColor = "#ff00ff";
-                    ctx.fillStyle = "rgba(255, 0, 255, 0.7)";
-                    ctx.beginPath(); ctx.roundRect(pR.x, pR.y, 22, 22, 5); ctx.fill();
-
-                    ctx.shadowBlur = 0; ctx.fillStyle = "#9ca3af"; ctx.font = "11px Arial"; ctx.textAlign = "center";
-                    ctx.fillText(pR.name, pR.x + 11, pR.y - 8);
+                let rp = remotePlayers[id];
+                if (rp.lvl === currentLevel) {
+                    ctx.shadowBlur = 15; ctx.shadowColor = "#ff00ff"; ctx.fillStyle = "rgba(255, 0, 255, 0.7)";
+                    ctx.beginPath(); ctx.roundRect(rp.x, rp.y, 22, 22, 5); ctx.fill();
+                    ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
+                    ctx.fillText(rp.name, rp.x + 11, rp.y - 10);
                 }
             }
 
-            ctx.shadowBlur = 15; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
+            // Lokální Hráč
+            ctx.shadowBlur = 20; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
             ctx.beginPath(); ctx.roundRect(player.x, player.y, player.width, player.height, 5); ctx.fill();
 
             ctx.restore();
