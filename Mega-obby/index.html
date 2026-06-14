@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - 100% Fixed Obby</title>
+    <title>Netorikaraft - 100% Fixed Mouse & Physics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -88,7 +88,7 @@
     <div id="instructions">
         <div class="start-card" id="startCardBtn">
             <h2>SPUSTIT HRU</h2>
-            <p>Klikni sem. Ovládání myši i plynulá chůze jsou 100% opraveny!</p>
+            <p>Klikni sem. Zamknutí myši, otáčení kamery i chůze jsou 100% opraveny!</p>
         </div>
     </div>
 
@@ -135,7 +135,6 @@
         let mobilniSmer = { x: 0, y: 0 };
         let mobilniSkok = false;
         let rotaceKamery = { yaw: 0, pitch: 0 };
-        let isMobile = false;
 
         function seededRandom(seed) {
             let x = Math.sin(seed++) * 10000;
@@ -194,19 +193,14 @@
             dirLight.position.set(10, 20, 15);
             scena.add(dirLight);
 
-            isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-            
-            // [OPRAVA MOUSE LOCK]: Teď se korektně volá přímo na vygenerované plátno hry
+            // [OPRAVA MOUSE LOCK]: Teď spolehlivě zamykáme document.body, což prohlížeče bezpečně schválí
             document.getElementById('startCardBtn').addEventListener('click', () => {
-                if (!isMobile) {
-                    renderer.domElement.requestPointerLock();
-                } else {
-                    document.getElementById('instructions').style.display = 'none';
-                }
+                document.body.requestPointerLock();
+                document.getElementById('instructions').style.display = 'none';
             });
 
             document.addEventListener('mousemove', pohniKamerouPC);
-            if (isMobile) setupMobilniOvladani();
+            setupMobilniOvladani(); // Aktivní vždy (pro hybridní notebooky s dotykem)
 
             lokalniKontejnerAvatar = vytvorKrasnehoAvatara(0x00f0ff);
             scena.add(lokalniKontejnerAvatar);
@@ -216,19 +210,24 @@
             window.addEventListener('resize', onWindowResize);
 
             document.addEventListener('pointerlockchange', () => {
-                if (isMobile) return;
-                if (document.pointerLockElement === renderer.domElement) {
+                if (document.pointerLockElement === document.body) {
                     document.getElementById('instructions').style.display = 'none';
                     document.getElementById('crosshair').style.display = 'block';
                 } else {
-                    document.getElementById('instructions').style.display = 'flex';
+                    // Pokud se neschovaly ovládací prvky mobilu přes CSS, vrátíme uvítací obrazovku
+                    const mobileControls = document.getElementById('mobileControls');
+                    const isMobileLayout = window.getComputedStyle(mobileControls).display !== 'none';
+                    if (!isMobileLayout) {
+                        document.getElementById('instructions').style.display = 'flex';
+                    }
                     document.getElementById('crosshair').style.display = 'none';
                 }
             });
         }
 
+        // [OPRAVA OTÁČENÍ]: Kontrola upravena na document.body
         function pohniKamerouPC(e) {
-            if (document.pointerLockElement !== renderer.domElement) return;
+            if (document.pointerLockElement !== document.body) return;
             rotaceKamery.yaw -= e.movementX * 0.0025;
             rotaceKamery.pitch -= e.movementY * 0.0025;
             rotaceKamery.pitch = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, rotaceKamery.pitch));
@@ -345,7 +344,6 @@
             pole.push({ mesh, min: new THREE.Vector3(x - w/2, y - h/2, z - d/2), max: new THREE.Vector3(x + w/2, y + h/2, z + d/2) });
         }
 
-        // [OPRAVA KOLIZÍ]: Změněno na čisté 3D překrývání (AABB), které ignoruje pouhé dotyky hran na ose Y při chůzi
         function kontrolaKolize(b1, b2) {
             return (b1.min.x < b2.max.x && b1.max.x > b2.min.x) &&
                    (b1.min.y < b2.max.y && b1.max.y > b2.min.y) &&
@@ -370,34 +368,34 @@
             if (klavesy['KeyA'] || klavesy['ArrowLeft']) { hrac.rychlost.x -= sStrana.x * RYCHLOST_POHYBU; hrac.rychlost.z -= sStrana.z * RYCHLOST_POHYBU; }
             if (klavesy['KeyD'] || klavesy['ArrowRight']) { hrac.rychlost.x += sStrana.x * RYCHLOST_POHYBU; hrac.rychlost.z += sStrana.z * RYCHLOST_POHYBU; }
 
-            if (isMobile && (Math.abs(mobilniSmer.x) > 0.01 || Math.abs(mobilniSmer.y) > 0.01)) {
+            if (Math.abs(mobilniSmer.x) > 0.01 || Math.abs(mobilniSmer.y) > 0.01) {
                 hrac.rychlost.x -= sVpred.x * mobilniSmer.y * RYCHLOST_POHYBU;
                 hrac.rychlost.z -= sVpred.z * mobilniSmer.y * RYCHLOST_POHYBU;
                 hrac.rychlost.x += sStrana.x * mobilniSmer.x * RYCHLOST_POHYBU;
                 hrac.rychlost.z += sStrana.z * mobilniSmer.x * RYCHLOST_POHYBU;
             }
 
-            // Aplikace pohybu na ose X + okamžitá reálná kontrola
+            // Pohyb X
             hrac.pozice.x += hrac.rychlost.x;
             let hb = ziskejHracBox(hrac.pozice);
             for (let i = 0; i < platformyFyzika.length; i++) {
                 if (kontrolaKolize(hb, platformyFyzika[i])) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; break; }
             }
 
-            // Aplikace pohybu na ose Z + okamžitá reálná kontrola
+            // Pohyb Z
             hrac.pozice.z += hrac.rychlost.z;
             hb = ziskejHracBox(hrac.pozice);
             for (let i = 0; i < platformyFyzika.length; i++) {
                 if (kontrolaKolize(hb, platformyFyzika[i])) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; break; }
             }
 
-            // Gravitace a Skoky
-            if ((klavesy['Space'] || (isMobile && mobilniSkok)) && !hrac.veVzduchu) {
+            // Skok a Gravitace
+            if ((klavesy['Space'] || mobilniSkok) && !hrac.veVzduchu) {
                 hrac.rychlost.y = SILA_SKOKU; hrac.veVzduchu = true;
             }
             hrac.rychlost.y -= GRAVITACE;
 
-            // Vertikální osa Y (Hladké stání na platformě)
+            // Stabilní chůze na platformě (Osa Y)
             hrac.pozice.y += hrac.rychlost.y;
             hb = ziskejHracBox(hrac.pozice); 
             hrac.veVzduchu = true;
@@ -417,11 +415,11 @@
                 }
             }
 
-            // Smrtící zóny (Láva a pád do prázdna)
+            // Smrt a Restart
             lavaFyzika.forEach(l => { if (kontrolaKolize(hb, l)) restartHry(); });
             if (hrac.pozice.y < -18) restartHry();
             
-            // Dosažení cíle
+            // Port do dalšího levelu
             if (cilFyzika && kontrolaKolize(hb, cilFyzika)) {
                 mujLevel++;
                 if(mujLevel > 100) mujLevel = 1;
@@ -433,7 +431,7 @@
 
             lokalniKontejnerAvatar.position.copy(hrac.pozice);
             
-            // Animace končetin při pohybu
+            // Animování končetin při běhu
             if (Math.abs(hrac.rychlost.x) > 0.01 || Math.abs(hrac.rychlost.z) > 0.01) {
                 lokalniKontejnerAvatar.rotation.y = Math.atan2(hrac.rychlost.x, hrac.rychlost.z);
                 animacniCas += 0.22;
@@ -446,7 +444,7 @@
                 lokalniKontejnerAvatar.userData.rukaL.rotation.x = 0; lokalniKontejnerAvatar.userData.rukaP.rotation.x = 0;
             }
 
-            // Vykreslování ostatních hráčů v reálném čase
+            // Síťový multiplayer vykreslení
             const nyni = Date.now();
             for (let id in vzdaleniHraci) {
                 const v = vzdaleniHraci[id];
@@ -458,6 +456,7 @@
                 }
             }
 
+            // Výpočet pozice kamery z myši (orbitální třetí osoba)
             let kvaternionKamery = new THREE.Quaternion().setFromEuler(new THREE.Euler(rotaceKamery.pitch, rotaceKamery.yaw, 0, 'YXZ'));
             let vzdalenostKamery = new THREE.Vector3(0, 2.0, 5.0).applyQuaternion(kvaternionKamery);
             
