@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Fixed Multiplayer Obby</title>
+    <title>Netorikaraft - 100% Fixed Obby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -88,7 +88,7 @@
     <div id="instructions">
         <div class="start-card" id="startCardBtn">
             <h2>SPUSTIT HRU</h2>
-            <p>Klikni pro uzamčení myši. Chůze na platformách i skákání plně opraveno!</p>
+            <p>Klikni sem. Ovládání myši i plynulá chůze jsou 100% opraveny!</p>
         </div>
     </div>
 
@@ -124,11 +124,11 @@
         const hrac = {
             pozice: new THREE.Vector3(0, 3, 0),
             rychlost: new THREE.Vector3(0, 0, 0),
-            sirka: 0.8, vyska: 1.8, hloubka: 0.8, veVzduchu: true
+            sirka: 0.6, vyska: 1.8, hloubka: 0.6, veVzduchu: true
         };
 
         const RYCHLOST_POHYBU = 0.15;
-        const SILA_SKOKU = 0.21;
+        const SILA_SKOKU = 0.20;
         const GRAVITACE = 0.009;
 
         const klavesy = {};
@@ -158,7 +158,7 @@
             const ctx = canvas.getContext('2d');
             
             ctx.clearRect(0, 0, 256, 64);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
             ctx.roundRect(10, 10, 236, 44, 15);
             ctx.fill();
             
@@ -171,8 +171,8 @@
             const textura = new THREE.CanvasTexture(canvas);
             const material = new THREE.SpriteMaterial({ map: textura });
             const sprite = new THREE.Sprite(material);
-            sprite.scale.set(2, 0.5, 1);
-            sprite.position.y = 2.0;
+            sprite.scale.set(1.8, 0.45, 1);
+            sprite.position.y = 2.1;
             return sprite;
         }
 
@@ -195,9 +195,14 @@
             scena.add(dirLight);
 
             isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            
+            // [OPRAVA MOUSE LOCK]: Teď se korektně volá přímo na vygenerované plátno hry
             document.getElementById('startCardBtn').addEventListener('click', () => {
-                if (!isMobile) container.requestPointerLock();
-                else document.getElementById('instructions').style.display = 'none';
+                if (!isMobile) {
+                    renderer.domElement.requestPointerLock();
+                } else {
+                    document.getElementById('instructions').style.display = 'none';
+                }
             });
 
             document.addEventListener('mousemove', pohniKamerouPC);
@@ -212,7 +217,7 @@
 
             document.addEventListener('pointerlockchange', () => {
                 if (isMobile) return;
-                if (document.pointerLockElement === container) {
+                if (document.pointerLockElement === renderer.domElement) {
                     document.getElementById('instructions').style.display = 'none';
                     document.getElementById('crosshair').style.display = 'block';
                 } else {
@@ -223,7 +228,7 @@
         }
 
         function pohniKamerouPC(e) {
-            if (document.pointerLockElement !== document.getElementById('gameCanvas')) return;
+            if (document.pointerLockElement !== renderer.domElement) return;
             rotaceKamery.yaw -= e.movementX * 0.0025;
             rotaceKamery.pitch -= e.movementY * 0.0025;
             rotaceKamery.pitch = Math.max(-Math.PI/2.4, Math.min(Math.PI/2.4, rotaceKamery.pitch));
@@ -261,25 +266,25 @@
             const matHlava = new THREE.MeshLambertMaterial({ color: 0xffdbac });
             const matOci = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
-            const mTelo = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 0.7, 12), matObleceni);
+            const mTelo = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.7, 12), matObleceni);
             mTelo.position.y = 0.85; kontejner.add(mTelo);
             
-            const mHlava = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matHlava);
+            const mHlava = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), matHlava);
             mHlava.position.y = 1.35; kontejner.add(mHlava);
 
-            const mOkoL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), matOci);
-            mOkoL.position.set(-0.08, 1.38, 0.21); kontejner.add(mOkoL);
-            const mOkoP = mOkoL.clone(); mOkoP.position.x = 0.08; kontejner.add(mOkoP);
+            const mOkoL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.04), matOci);
+            mOkoL.position.set(-0.07, 1.38, 0.19); kontejner.add(mOkoL);
+            const mOkoP = mOkoL.clone(); mOkoP.position.x = 0.07; kontejner.add(mOkoP);
 
-            const geoNoha = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8);
+            const geoNoha = new THREE.CylinderGeometry(0.09, 0.09, 0.5, 8);
             const mNohaL = new THREE.Mesh(geoNoha, matTelo);
-            mNohaL.position.set(-0.16, 0.25, 0); kontejner.add(mNohaL);
-            const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.16; kontejner.add(mNohaP);
+            mNohaL.position.set(-0.14, 0.25, 0); kontejner.add(mNohaL);
+            const mNohaP = mNohaL.clone(); mNohaP.position.x = 0.14; kontejner.add(mNohaP);
 
-            const geoRuka = new THREE.CylinderGeometry(0.09, 0.09, 0.5, 8);
+            const geoRuka = new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8);
             const mRukaL = new THREE.Mesh(geoRuka, matObleceni);
-            mRukaL.position.set(-0.45, 0.85, 0); mRukaL.rotation.z = 0.1; kontejner.add(mRukaL);
-            const mRukaP = mRukaL.clone(); mRukaP.position.x = 0.45; mRukaP.rotation.z = -0.1; kontejner.add(mRukaP);
+            mRukaL.position.set(-0.4, 0.85, 0); mRukaL.rotation.z = 0.1; kontejner.add(mRukaL);
+            const mRukaP = mRukaL.clone(); mRukaP.position.x = 0.4; mRukaP.rotation.z = -0.1; kontejner.add(mRukaP);
 
             kontejner.userData = { nohaL: mNohaL, nohaP: mNohaP, rukaL: mRukaL, rukaP: mRukaP };
             return kontejner;
@@ -340,8 +345,11 @@
             pole.push({ mesh, min: new THREE.Vector3(x - w/2, y - h/2, z - d/2), max: new THREE.Vector3(x + w/2, y + h/2, z + d/2) });
         }
 
+        // [OPRAVA KOLIZÍ]: Změněno na čisté 3D překrývání (AABB), které ignoruje pouhé dotyky hran na ose Y při chůzi
         function kontrolaKolize(b1, b2) {
-            return (b1.min.x <= b2.max.x && b1.max.x >= b2.min.x) && (b1.min.y <= b2.max.y && b1.max.y >= b2.min.y) && (b1.min.z <= b2.max.z && b1.max.z >= b2.min.z);
+            return (b1.min.x < b2.max.x && b1.max.x > b2.min.x) &&
+                   (b1.min.y < b2.max.y && b1.max.y > b2.min.y) &&
+                   (b1.min.z < b2.max.z && b1.max.z > b2.min.z);
         }
 
         function ziskejHracBox(p) {
@@ -354,58 +362,66 @@
             let sVpred = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
             let sStrana = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), rotaceKamery.yaw).normalize();
 
-            let pX = 0; let pZ = 0;
+            hrac.rychlost.x = 0;
+            hrac.rychlost.z = 0;
 
-            if (klavesy['KeyW'] || klavesy['ArrowUp']) { pX += sVpred.x; pZ += sVpred.z; }
-            if (klavesy['KeyS'] || klavesy['ArrowDown']) { pX -= sVpred.x; pZ -= sVpred.z; }
-            if (klavesy['KeyA'] || klavesy['ArrowLeft']) { pX -= sStrana.x; pZ -= sStrana.z; }
-            if (klavesy['KeyD'] || klavesy['ArrowRight']) { pX += sStrana.x; pZ += sStrana.z; }
+            if (klavesy['KeyW'] || klavesy['ArrowUp']) { hrac.rychlost.x += sVpred.x * RYCHLOST_POHYBU; hrac.rychlost.z += sVpred.z * RYCHLOST_POHYBU; }
+            if (klavesy['KeyS'] || klavesy['ArrowDown']) { hrac.rychlost.x -= sVpred.x * RYCHLOST_POHYBU; hrac.rychlost.z -= sVpred.z * RYCHLOST_POHYBU; }
+            if (klavesy['KeyA'] || klavesy['ArrowLeft']) { hrac.rychlost.x -= sStrana.x * RYCHLOST_POHYBU; hrac.rychlost.z -= sStrana.z * RYCHLOST_POHYBU; }
+            if (klavesy['KeyD'] || klavesy['ArrowRight']) { hrac.rychlost.x += sStrana.x * RYCHLOST_POHYBU; hrac.rychlost.z += sStrana.z * RYCHLOST_POHYBU; }
 
             if (isMobile && (Math.abs(mobilniSmer.x) > 0.01 || Math.abs(mobilniSmer.y) > 0.01)) {
-                pX -= sVpred.x * mobilniSmer.y; pZ -= sVpred.z * mobilniSmer.y;
-                pX += sStrana.x * mobilniSmer.x; pZ += sStrana.z * mobilniSmer.x;
+                hrac.rychlost.x -= sVpred.x * mobilniSmer.y * RYCHLOST_POHYBU;
+                hrac.rychlost.z -= sVpred.z * mobilniSmer.y * RYCHLOST_POHYBU;
+                hrac.rychlost.x += sStrana.x * mobilniSmer.x * RYCHLOST_POHYBU;
+                hrac.rychlost.z += sStrana.z * mobilniSmer.x * RYCHLOST_POHYBU;
             }
 
-            // [OPRAVENO]: Rychlost se aplikuje bez ohledu na to, zda stojíme na zemi nebo letíme
-            hrac.rychlost.x = pX * RYCHLOST_POHYBU;
-            hrac.rychlost.z = pZ * RYCHLOST_POHYBU;
+            // Aplikace pohybu na ose X + okamžitá reálná kontrola
+            hrac.pozice.x += hrac.rychlost.x;
+            let hb = ziskejHracBox(hrac.pozice);
+            for (let i = 0; i < platformyFyzika.length; i++) {
+                if (kontrolaKolize(hb, platformyFyzika[i])) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; break; }
+            }
 
+            // Aplikace pohybu na ose Z + okamžitá reálná kontrola
+            hrac.pozice.z += hrac.rychlost.z;
+            hb = ziskejHracBox(hrac.pozice);
+            for (let i = 0; i < platformyFyzika.length; i++) {
+                if (kontrolaKolize(hb, platformyFyzika[i])) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; break; }
+            }
+
+            // Gravitace a Skoky
             if ((klavesy['Space'] || (isMobile && mobilniSkok)) && !hrac.veVzduchu) {
-                hrac.rychlost.y = SILA_SKOKU; 
-                hrac.veVzduchu = true;
+                hrac.rychlost.y = SILA_SKOKU; hrac.veVzduchu = true;
             }
             hrac.rychlost.y -= GRAVITACE;
 
-            // Pohyb a kolize na ose X
-            hrac.pozice.x += hrac.rychlost.x;
-            let hb = ziskejHracBox(hrac.pozice);
-            platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.x -= hrac.rychlost.x; hrac.rychlost.x = 0; } });
-
-            // Pohyb a kolize na ose Z
-            hrac.pozice.z += hrac.rychlost.z;
-            hb = ziskejHracBox(hrac.pozice);
-            platformyFyzika.forEach(p => { if (kontrolaKolize(hb, p)) { hrac.pozice.z -= hrac.rychlost.z; hrac.rychlost.z = 0; } });
-
-            // Pohyb a kolize na ose Y (Vertikální stabilita na plošinách)
+            // Vertikální osa Y (Hladké stání na platformě)
             hrac.pozice.y += hrac.rychlost.y;
             hb = ziskejHracBox(hrac.pozice); 
             hrac.veVzduchu = true;
             
-            platformyFyzika.forEach(p => {
+            for (let i = 0; i < platformyFyzika.length; i++) {
+                let p = platformyFyzika[i];
                 if (kontrolaKolize(hb, p)) {
-                    if (hrac.rychlost.y <= 0) { 
+                    if (hrac.rychlost.y < 0) { 
                         hrac.pozice.y = p.max.y; 
                         hrac.rychlost.y = 0; 
-                        hrac.veVzduchu = false; // Hráč bezpečně stojí na plošině a nespadne skrz ni
+                        hrac.veVzduchu = false; 
                     } else if (hrac.rychlost.y > 0) { 
                         hrac.pozice.y = p.min.y - hrac.vyska; 
                         hrac.rychlost.y = 0; 
                     }
+                    break;
                 }
-            });
+            }
 
+            // Smrtící zóny (Láva a pád do prázdna)
             lavaFyzika.forEach(l => { if (kontrolaKolize(hb, l)) restartHry(); });
+            if (hrac.pozice.y < -18) restartHry();
             
+            // Dosažení cíle
             if (cilFyzika && kontrolaKolize(hb, cilFyzika)) {
                 mujLevel++;
                 if(mujLevel > 100) mujLevel = 1;
@@ -414,11 +430,10 @@
                 restartHry();
                 aktualizovatLevelVDatabazi();
             }
-            if (hrac.pozice.y < -18) restartHry();
 
             lokalniKontejnerAvatar.position.copy(hrac.pozice);
             
-            // Animace chůze se spouští podle reálné vygenerované rychlosti
+            // Animace končetin při pohybu
             if (Math.abs(hrac.rychlost.x) > 0.01 || Math.abs(hrac.rychlost.z) > 0.01) {
                 lokalniKontejnerAvatar.rotation.y = Math.atan2(hrac.rychlost.x, hrac.rychlost.z);
                 animacniCas += 0.22;
@@ -431,6 +446,7 @@
                 lokalniKontejnerAvatar.userData.rukaL.rotation.x = 0; lokalniKontejnerAvatar.userData.rukaP.rotation.x = 0;
             }
 
+            // Vykreslování ostatních hráčů v reálném čase
             const nyni = Date.now();
             for (let id in vzdaleniHraci) {
                 const v = vzdaleniHraci[id];
