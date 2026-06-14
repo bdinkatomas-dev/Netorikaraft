@@ -158,7 +158,6 @@
         .panel-block { background: var(--bg-card); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #1e2230; }
         .section-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 
-        /* Profilová mini karta */
         .profile-card { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; background: #181b26; padding: 16px; border-radius: 12px; }
         .profile-avatar { width: 44px; height: 44px; background: var(--accent); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
         .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 0.8rem; text-align: center; }
@@ -171,12 +170,10 @@
         .game-info { padding: 14px; }
         .game-name { font-size: 1rem; font-weight: 600; }
 
-        /* Seznamy hráčů a přátel */
         .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #222533; }
         .user-item.playable { cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
         .user-item.playable:hover { background: #202433; border-color: var(--accent-success); }
         
-        /* Pulzující animace pro kamaráda ve hře */
         .user-item.playable::after {
             content: ''; position: absolute; right: 0; top: 0; width: 4px; height: 100%; background: var(--accent-success); animation: pulseSide 1.5s infinite;
         }
@@ -191,7 +188,6 @@
         .btn-success { background: var(--accent-success); box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
         .btn-success:hover { background: var(--accent-success-hover); }
 
-        /* Globální Chat */
         .chat-container { display: flex; flex-direction: column; height: 350px; background: var(--bg-card); border-radius: 16px; overflow: hidden; border: 1px solid #1e2230; }
         .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; }
         .chat-msg { background: var(--bg-input); padding: 10px 14px; border-radius: 10px; border-top-left-radius: 2px; align-self: flex-start; max-width: 90%; border: 1px solid #222533; }
@@ -246,7 +242,7 @@
                         <div class="profile-avatar">🕹️</div>
                         <div>
                             <div style="font-weight: 700;" id="profileName">Hráč</div>
-                            <div style="font-size: 0.75rem; color: var(--accent-success);">● Připojen do Hubu</div>
+                            <div style="font-size: 0.75rem; color: var(--accent-success);" id="hubStatusText">● V Lobby</div>
                         </div>
                     </div>
                     <div class="stats-row">
@@ -297,7 +293,6 @@
         let mujUsername = "";
         let chatKanal = null;
         let listHerCache = [];
-        let aktualniUlozenaHra = "Lobby";
 
         try {
             if (SUPABASE_URL && SUPABASE_KEY) {
@@ -306,49 +301,6 @@
         } catch (e) {
             console.error("Chyba inicializace Supabase:", e);
         }
-
-        // Přepínání Login / Registrace
-        const switchMode = document.getElementById('switchMode');
-        const usernameGroup = document.getElementById('usernameGroup');
-        const authTitle = document.getElementById('authTitle');
-        const authBtn = document.getElementById('authBtn');
-
-        switchMode.addEventListener('click', () => {
-            isLoginMode = !isLoginMode;
-            if (isLoginMode) {
-                authTitle.innerText = "Netorikaraft";
-                usernameGroup.style.display = "none";
-                authBtn.innerText = "Přihlásit se";
-                switchMode.innerHTML = "Nemáš účet? <span>Zaregistruj se</span>";
-            } else {
-                authTitle.innerText = "Registrace";
-                usernameGroup.style.display = "block";
-                authBtn.innerText = "Zaregistrovat se";
-                switchMode.innerHTML = "Už máš účet? <span>Přihlas se</span>";
-            }
-        });
-
-        authBtn.addEventListener('click', async () => {
-            if (!sb) { alert("API klíče nejsou připraveny!"); return; }
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const username = document.getElementById('username').value.trim();
-
-            if (!email || !password) { alert("Vyplň e-mail a heslo."); return; }
-
-            if (isLoginMode) {
-                const { data, error } = await sb.auth.signInWithPassword({ email, password });
-                if (error) alert("Chyba přihlášení: " + error.message);
-                else checkUser();
-            } else {
-                if (!username) { alert("Zadej uživatelské jméno!"); return; }
-                const { data, error } = await sb.auth.signUp({
-                    email, password, options: { data: { display_name: username } }
-                });
-                if (error) alert("Chyba registrace: " + error.message);
-                else { alert("Účet vytvořen! Nyní se přihlas."); switchMode.click(); }
-            }
-        });
 
         async function checkUser() {
             if (!sb) return;
@@ -364,7 +316,7 @@
                 document.getElementById('authPage').classList.remove('active');
                 document.getElementById('clientPage').classList.add('active');
 
-                // Při zapnutí jsme vždy v Lobby
+                // Hub odesílá striktně pouze Lobby stav při zapnutí
                 await aktualizujMujHerniStav('Lobby', user.email);
 
                 nactiKlientskaData();
@@ -372,12 +324,9 @@
             }
         }
 
-        // --- 🚀 AUTOMATICKÁ AKTUALIZACE STAVU ---
         async function aktualizujMujHerniStav(nazevHry, fallbackEmail = "") {
             if (!mojeId || !sb) return;
             
-            aktualniUlozenaHra = nazevHry;
-
             await sb.from('online_players').upsert({
                 id: mojeId,
                 username: mujUsername,
@@ -387,17 +336,20 @@
             }, { onConflict: 'id' });
         }
 
-        // --- 🔁 DETEKCE NÁVRATU DO LOBBY TABU ---
-        // Když hráč zavře záložku s minihrou a vrátí se sem, okamžitě ho to hodí do stavu Lobby
+        // --- 🔁 AUTOMATICKÝ NÁVRAT DO LOBBY STAVU ---
+        // Když se uživatel překlikne ze záložky hry zpět na Hub, Hub ho automaticky hodí zpět do Lobby
         window.addEventListener('focus', async () => {
-            if (mojeId && sb && aktualniUlozenaHra !== 'Lobby') {
+            if (mojeId && sb) {
                 await aktualizujMujHerniStav('Lobby');
+                document.getElementById('hubStatusText').innerText = "● V Lobby";
+                document.getElementById('hubStatusText').style.color = "var(--accent-success)";
             }
         });
 
-        // Spuštění hry v nové záložce (Vercel kompatibilní)
-        async function spustHru(nazevHry, urlPath) {
-            await aktualizujMujHerniStav(nazevHry);
+        // Hub hru pouze otevře. Zápis stavu "že hraje" nechá čistě na kódu dané hry!
+        function spustHru(urlPath) {
+            document.getElementById('hubStatusText').innerText = "● Spouštění hry...";
+            document.getElementById('hubStatusText').style.color = "var(--accent)";
             window.open(`https://netorikaraft.vercel.app${urlPath}`, '_blank');
         }
 
@@ -413,7 +365,7 @@
                 fGrid.innerHTML = "";
                 hry.forEach((h, index) => {
                     const cardHtml = `
-                        <div class="game-card" onclick="spustHru('${h.name}', '${h.url_path}')">
+                        <div class="game-card" onclick="spustHru('${h.url_path}')">
                             <div class="game-thumbnail">${h.emoji}</div>
                             <div class="game-info">
                                 <div class="game-name">${h.name}</div>
@@ -497,26 +449,22 @@
             }
         }
 
-        // --- 🔗 PŘIPOJENÍ NA KAMARÁDA ---
         async function pripojSeKPrateli(nazevHry) {
             const nalezenaHra = listHerCache.find(h => h.name === nazevHry);
             if (nalezenaHra) {
-                await aktualizujMujHerniStav(nazevHry);
                 window.open(`https://netorikaraft.vercel.app${nalezenaHra.url_path}`, '_blank');
             } else {
-                alert("Hra nebyla v databázi nalezena.");
+                alert("Hra nebyla nalezena.");
             }
         }
 
+        // Tlačítka Auth a vyhledávání
         document.getElementById('searchPlayerBtn').addEventListener('click', async () => {
             const dotaz = document.getElementById('searchPlayerInput').value.trim();
             const vysledkyDiv = document.getElementById('playerSearchResults');
             if(!dotaz) return;
 
-            const { data: hraci } = await sb.from('online_players')
-                .select('*')
-                .ilike('username', `%${dotaz}%`)
-                .not('id', 'eq', mojeId);
+            const { data: hraci } = await sb.from('online_players').select('*').ilike('username', `%${dotaz}%`).not('id', 'eq', mojeId);
 
             if(hraci && hraci.length > 0) {
                 vysledkyDiv.innerHTML = "";
@@ -533,20 +481,9 @@
         });
 
         async function pridejPritele(targetId) {
-            const { error } = await sb.from('friends').insert({
-                user_id: mojeId,
-                friend_id: targetId,
-                status: 'accepted'
-            });
-
-            if (error) {
-                alert("Uživatele již máš v přátelích.");
-            } else {
-                alert("Hráč přidán!");
-                document.getElementById('playerSearchResults').innerHTML = "";
-                document.getElementById('searchPlayerInput').value = "";
-                nactiSeznamPratel();
-            }
+            const { error } = await sb.from('friends').insert({ user_id: mojeId, friend_id: targetId, status: 'accepted' });
+            if (error) alert("Uživatele již máš v přátelích.");
+            else { alert("Hráč přidán!"); nactiSeznamPratel(); }
         }
 
         function odesliChat() {
@@ -569,9 +506,7 @@
         });
 
         window.addEventListener('beforeunload', () => {
-            if (sb && mojeId) {
-                sb.from('online_players').delete().eq('id', mojeId);
-            }
+            if (sb && mojeId) sb.from('online_players').delete().eq('id', mojeId);
         });
 
         checkUser();
