@@ -317,39 +317,37 @@
                 document.getElementById('authPage').classList.remove('active');
                 document.getElementById('clientPage').classList.add('active');
 
-                // Podíváme se, jestli se nevracíme z minihry (kontrola localStorage)
-                let ulozenaHra = localStorage.getItem('netorikaraft_current_game') || 'Lobby';
-                await aktualizujMujHerniStav(ulozenaHra, user.email);
+                // Při zapnutí klientského hubu jsme vždy defaultně v Lobby
+                await aktualizujMujHerniStav('Lobby', user.email);
 
                 nactiKlientskaData();
                 zapniRealtimeEngine(); 
             }
         }
 
-        // --- 100% FUNKČNÍ AKTUALIZACE STAVU (Synchronní s počkáním) ---
+        // --- 🚀 BEZPEČNÁ AKTUALIZACE STAVU NA SUPABASE ---
         async function aktualizujMujHerniStav(nazevHry, fallbackEmail = "") {
             if (!mojeId || !sb) return;
             
-            localStorage.setItem('netorikaraft_current_game', nazevHry);
-
             const { error } = await sb.from('online_players').upsert({
                 id: mojeId,
                 username: mujUsername,
                 email: fallbackEmail || undefined,
                 current_game: nazevHry,
                 updated_at: new Date().toISOString()
-            });
+            }, { onConflict: 'id' });
 
             if (error) {
-                console.error("Chyba zápisu na Supabase:", error);
+                console.error("Chyba zápisu stavu hry:", error);
             }
         }
 
-        // --- SPUŠTĚNÍ HRY KLIENTEM ---
+        // --- SPUŠTĚNÍ HRY V NOVÉM TABU (Zajistí neustálý běh stavu) ---
         async function spustHru(nazevHry, urlPath) {
-            // Nejdřív zapíšeme stav, POČKÁME na dokončení zápisu a až pak přesměrujeme
+            // Změníme hru v DB, počkáme na potvrzení od Supabase
             await aktualizujMujHerniStav(nazevHry);
-            window.location.href = `https://netorikaraft.vercel.app${urlPath}`;
+            // Otevřeme hru v novém okně. Lobby zůstane aktivní a dál vysílá tvůj stav!
+            window.open(`https://netorikaraft.vercel.app${urlPath}`, '_blank');
         }
 
         async function nactiKlientskaData() {
@@ -442,15 +440,15 @@
             }
         }
 
-        // --- 100% FUNKČNÍ PŘIPOJENÍ (Join) ---
+        // --- 🔥 100% FUNKČNÍ PŘIPOJENÍ K PŘÍTELI ---
         async function pripojSeKPrateli(nazevHry) {
             const nalezenaHra = listHerCache.find(h => h.name === nazevHry);
             if (nalezenaHra) {
-                // Nejdřív změníme stav u sebe na Supabase, počkáme a skočíme za ním
+                // Aktualizujeme náš stav, počkáme na zápis a otevřeme stejnou hru
                 await aktualizujMujHerniStav(nazevHry);
-                window.location.href = `https://netorikaraft.vercel.app${nalezenaHra.url_path}`;
+                window.open(`https://netorikaraft.vercel.app${nalezenaHra.url_path}`, '_blank');
             } else {
-                alert("Nelze se připojit: Tato minihra nebyla nalezena v databázi klientů.");
+                alert("Nelze se připojit: Tato hra nebyla nalezena v databázi.");
             }
         }
 
@@ -510,7 +508,6 @@
         });
 
         document.getElementById('logoutBtn').addEventListener('click', async () => {
-            localStorage.removeItem('netorikaraft_current_game');
             if (mojeId && sb) await sb.from('online_players').delete().eq('id', mojeId);
             if (chatKanal) chatKanal.unsubscribe();
             if (sb) await sb.auth.signOut();
@@ -519,7 +516,7 @@
 
         window.addEventListener('beforeunload', () => {
             if (sb && mojeId) {
-                // Pokusíme se bezpečně smazat relaci při opuštění stránky
+                // Smaže se z online_players pouze pokud úplně zavře záložku s Lobby
                 sb.from('online_players').delete().eq('id', mojeId);
             }
         });
