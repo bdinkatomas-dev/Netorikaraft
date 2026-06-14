@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netorikaraft - Klientský Hub</title>
+    <title>Netorikaraft - Klient</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -35,7 +35,6 @@
             overflow-x: hidden;
         }
 
-        /* SPA Přepínání obrazovek */
         .page { display: none; }
         .page.active { display: block; }
 
@@ -160,6 +159,9 @@
 
         /* Prvky pro seznamy hráčů a přátel */
         .user-item { display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
+        .user-item.playable { cursor: pointer; transition: background 0.2s, transform 0.1s; }
+        .user-item.playable:hover { background: #292f3f; transform: scale(1.02); }
+        
         .user-info-text { display: flex; flex-direction: column; gap: 2px; }
         .user-name-label { font-weight: 600; font-size: 0.9rem; }
         .user-status-label { font-size: 0.75rem; color: var(--accent); }
@@ -217,7 +219,7 @@
 
             <div>
                 <div class="panel-block">
-                    <h2 class="section-title">👥 Přátelé online</h2>
+                    <h2 class="section-title">👥 Přátelé online (Klikni pro připojení)</h2>
                     <div id="friendsList"><p style="color:var(--text-muted); font-size:0.85rem;">Nemáš žádné přátele online.</p></div>
                 </div>
 
@@ -315,13 +317,28 @@
                 document.getElementById('authPage').classList.remove('active');
                 document.getElementById('clientPage').classList.add('active');
 
-                await sb.from('online_players').upsert({
-                    id: mojeId, username: mujUsername, email: user.email, current_game: 'Lobby', updated_at: new Date().toISOString()
-                });
+                // Při přihlášení je defaultně stav 'Lobby'
+                await aktualizujMujHerniStav('Lobby', user.email);
 
                 nactiKlientskaData();
                 zapniRealtimeEngine(); 
             }
+        }
+
+        // --- 🚀 NOVÁ FUNKCE PRO AKTUALIZACI STAVU NA SUPABASE ---
+        // Tuto funkci můžeš zavolat odkudkoliv, když hráč vleze do minihry!
+        async function aktualizujMujHerniStav(nazevHry, fallbackEmail = "") {
+            if (!mojeId || !sb) return;
+            
+            const { error } = await sb.from('online_players').upsert({
+                id: mojeId,
+                username: mujUsername,
+                email: fallbackEmail || undefined, // Email se pošle jen při prvním login upsertu
+                current_game: nazevHry,
+                updated_at: new Date().toISOString()
+            });
+
+            if (error) console.error("Chyba při aktualizaci stavu hry na Supabase:", error);
         }
 
         async function nactiKlientskaData() {
@@ -334,8 +351,9 @@
                 gGrid.innerHTML = "";
                 fGrid.innerHTML = "";
                 hry.forEach((h, index) => {
+                    // Kliknutím na hru změníme stav na Supabase a spustíme přesměrování
                     const cardHtml = `
-                        <div class="game-card" onclick="window.location.href='https://netorikaraft.vercel.app${h.url_path}'">
+                        <div class="game-card" onclick="aktualizujMujHerniStav('${h.name}').then(() => { window.location.href='https://netorikaraft.vercel.app${h.url_path}'; })">
                             <div class="game-thumbnail">${h.emoji}</div>
                             <div class="game-info">
                                 <div class="game-name">${h.name}</div>
@@ -391,12 +409,18 @@
                 fListDiv.innerHTML = "";
                 onlinePratele.forEach(p => {
                     let joinTlacitkoHtml = "";
+                    let itemClass = "user-item";
+                    let klikatkoHtml = "";
+
+                    // Pokud kamarád není v lobby, celá karta bude klikatelná a získá vizuální styl tlačítka
                     if (p.current_game !== 'Lobby') {
-                        joinTlacitkoHtml = `<button class="sm-btn btn-success" onclick="pripojSeKPrateli('${p.current_game}')">Join</button>`;
+                        itemClass = "user-item playable";
+                        klikatkoHtml = `onclick="pripojSeKPrateli('${p.current_game}')"`;
+                        joinTlacitkoHtml = `<button class="sm-btn btn-success">Join</button>`;
                     }
 
                     fListDiv.innerHTML += `
-                        <div class="user-item">
+                        <div class="${itemClass}" ${klikatkoHtml}>
                             <div class="user-info-text">
                                 <span class="user-name-label">${p.username}</span>
                                 <span class="user-status-label">📍 ${p.current_game}</span>
@@ -412,7 +436,10 @@
         function pripojSeKPrateli(nazevHry) {
             const nalezenaHra = listHerCache.find(h => h.name === nazevHry);
             if (nalezenaHra) {
-                window.location.href = `https://netorikaraft.vercel.app${nalezenaHra.url_path}`;
+                // Před připojením k příteli zaktualizujeme stav i pro sebe, aby ostatní věděli, kam jdeme
+                aktualizujMujHerniStav(nazevHry).then(() => {
+                    window.location.href = `https://netorikaraft.vercel.app${nalezenaHra.url_path}`;
+                });
             } else {
                 alert("Mise selhala: Nepodařilo se najít běžící instanci hry.");
             }
@@ -423,7 +450,6 @@
             const vysledkyDiv = document.getElementById('playerSearchResults');
             if(!dotaz) return;
 
-            // Vyhledávání v online_players tabulce
             const { data: hraci, error } = await sb.from('online_players')
                 .select('*')
                 .ilike('username', `%${dotaz}%`)
@@ -451,7 +477,7 @@
             });
 
             if (error) {
-                alert("Tento uživatel již v přátelích figuruje nebo nastala síťová chyba.");
+                alert("Tento uživatel již v přátelích figuruje nebo nastala chyba.");
             } else {
                 alert("Hráč přidán do přátel!");
                 document.getElementById('playerSearchResults').innerHTML = "";
