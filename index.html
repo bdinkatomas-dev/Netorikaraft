@@ -2,430 +2,381 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netorikaraft - Central Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Netorikaraft - Game Hub</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #030307;
-            --panel-bg: rgba(10, 11, 23, 0.45);
-            --panel-border: rgba(0, 240, 255, 0.15);
-            --accent-cyan: #00f0ff;
-            --accent-green: #00ff66;
-            --accent-pink: #ff0055;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; user-select: none; }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background-color: #050508;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
             overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(255, 0, 85, 0.03) 0%, transparent 40%);
-            background-attachment: fixed;
-            padding-bottom: 60px;
-        }
-
-        header {
-            width: 100%;
-            padding: 25px 5%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--panel-border);
-            backdrop-filter: blur(12px);
-            background: rgba(3, 3, 7, 0.7);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 900;
-            letter-spacing: 3px;
-            background: linear-gradient(135deg, #fff 30%, var(--accent-cyan));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
         }
 
         .container {
-            max-width: 1400px;
-            margin: 40px auto;
-            padding: 0 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* --- HEADER & USER PANEL --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 30px;
+            border-bottom: 2px solid rgba(0, 240, 255, 0.1);
+            margin-bottom: 40px;
+        }
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: #00f0ff;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+        .user-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .user-dot {
+            width: 10px;
+            height: 10px;
+            background: #00ff66;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ff66;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .main-layout {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 30px;
         }
 
-        @media (max-width: 1024px) {
-            .container { grid-template-columns: 1fr; }
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; }
         }
 
-        .glass-panel {
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 20px;
-            padding: 30px;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            margin-bottom: 30px;
-        }
-
-        h2 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
+        /* --- GAMES SECTION --- */
+        .section-title {
+            font-size: 1.3rem;
+            text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 20px;
-            text-transform: uppercase;
+            color: #ff0055;
+            text-shadow: 0 0 10px rgba(255, 0, 85, 0.3);
             display: flex;
             align-items: center;
             gap: 10px;
         }
-
-        h2::before {
-            content: ''; display: inline-block; width: 4px; height: 18px;
-            background: var(--accent-cyan); border-radius: 2px;
-            box-shadow: 0 0 10px var(--accent-cyan);
-        }
-
-        /* LOGIN / SIGN IN SEKCE */
-        .auth-box input {
-            width: 100%; padding: 12px; margin-bottom: 10px;
-            background: rgba(255,255,255,0.02); border: 1px solid var(--panel-border);
-            border-radius: 8px; color: #fff; outline: none; transition: 0.3s;
-        }
-        .auth-box input:focus { border-color: var(--accent-cyan); box-shadow: 0 0 10px rgba(0,240,255,0.2); }
-        .auth-btn {
-            width: 48%; padding: 12px; border: none; border-radius: 8px;
-            font-weight: bold; cursor: pointer; transition: 0.2s;
-        }
-        .login-btn { background: var(--accent-cyan); color: #000; margin-right: 4%; }
-        .register-btn { background: transparent; border: 1px solid var(--panel-border); color: #fff; }
-        .auth-btn:hover { opacity: 0.8; transform: translateY(-2px); }
-
-        /* HRY ROZDĚLENÍ */
         .games-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
         }
         .game-card {
-            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 16px; padding: 20px; text-align: center; cursor: pointer;
-            transition: all 0.3s ease;
+            background: rgba(20, 22, 35, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
         }
         .game-card:hover {
-            transform: translateY(-5px); background: rgba(0, 240, 255, 0.05);
-            border-color: var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+            transform: translateY(-5px);
+            border-color: #00f0ff;
+            box-shadow: 0 5px 20px rgba(0, 240, 255, 0.15);
         }
-        .game-icon { font-size: 2.2rem; margin-bottom: 10px; }
-        .game-title { font-weight: 700; margin-bottom: 5px; }
+        .game-emoji {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        .game-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        .game-creator {
+            font-size: 0.85rem;
+            color: #8a8f9f;
+        }
+        .play-tag {
+            margin-top: 20px;
+            padding: 8px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: #00f0ff;
+            text-align: center;
+            border-radius: 6px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .game-card:hover .play-tag {
+            background: #00f0ff;
+            color: #050508;
+        }
 
-        /* GLOBÁLNÍ CHAT */
-        .chat-box {
-            height: 250px; overflow-y: auto;
-            border: 1px solid var(--panel-border); background: rgba(0,0,0,0.2);
-            border-radius: 10px; padding: 15px; margin-bottom: 10px;
-            display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth;
+        /* --- ONLINE PLAYERS SIDEBAR --- */
+        .sidebar {
+            background: rgba(15, 17, 28, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            height: fit-content;
         }
-        .chat-msg { font-size: 0.9rem; line-height: 1.4; pointer-events: auto; user-select: text; }
-        .chat-msg .author { color: var(--accent-cyan); font-weight: bold; }
-        .chat-input-container { display: flex; gap: 10px; }
-        .chat-input {
-            flex: 1; padding: 12px; background: rgba(255,255,255,0.02);
-            border: 1px solid var(--panel-border); border-radius: 8px; color: #fff; outline: none;
+        .player-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .chat-send-btn {
-            background: var(--accent-cyan); border: none; padding: 0 20px; color: #000;
-            border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        .player-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
         }
-        .chat-send-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0,240,255,0.4); }
-
-        /* AKTIVNÍ HRÁČI */
-        .friends-list { max-height: 400px; overflow-y: auto; padding-right: 5px; }
-        .friend-item {
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 12px 15px; border-radius: 12px; margin-bottom: 10px; transition: 0.2s;
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
-        .friend-item:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
-        .friend-name { font-weight: 700; margin-bottom: 4px; }
-        .friend-status { font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .status-lobby { color: var(--text-muted); }
-        .status-lobby .status-dot { background: var(--text-muted); }
-        .status-playing { color: var(--accent-green); font-weight: 600; text-shadow: 0 0 8px rgba(0,255,102,0.3); }
-        .status-playing .status-dot { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+        .player-name {
+            font-weight: bold;
+            color: #fff;
+        }
+        .player-game {
+            font-size: 0.8rem;
+            color: #00ff66;
+        }
+        .player-game.in-hub {
+            color: #8a8f9f;
+        }
         .join-btn {
-            background: linear-gradient(135deg, #00f0ff, #0077ff); border: none; color: #000;
-            padding: 8px 14px; border-radius: 8px; font-weight: 800; font-size: 0.75rem; 
-            cursor: pointer; text-transform: uppercase; transition: 0.2s;
+            background: #ff0055;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
+            transition: all 0.2s;
+            pointer-events: auto;
         }
-        .join-btn:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(0,240,255,0.4); }
-
-        /* ČLÁNEK */
-        .news-badge {
-            background: rgba(255, 0, 85, 0.15); border: 1px solid var(--accent-pink);
-            color: var(--accent-pink); padding: 4px 12px; border-radius: 6px;
-            font-size: 0.75rem; font-weight: 800; display: inline-block; margin-bottom: 15px;
-            text-transform: uppercase; letter-spacing: 1px;
+        .join-btn:hover {
+            background: #ff2a73;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.7);
         }
-        .news-title { font-family: 'Orbitron', sans-serif; font-size: 1.6rem; margin-bottom: 15px; color: #fff;}
-        .news-content { color: #cbd5e1; line-height: 1.6; margin-bottom: 10px; font-size: 1.05rem;}
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
-        ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.2); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.5); }
+        .no-players {
+            text-align: center;
+            color: #5a5f6f;
+            font-size: 0.9rem;
+            padding: 20px 0;
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="logo">NETORIKARAFT</div>
-        <div id="userTag" style="color: var(--accent-cyan); font-weight: 600;">Host (Nepřihlášen)</div>
-    </header>
-
     <div class="container">
-        
-        <div>
-            <div class="glass-panel">
-                <h2>⭐ Doporučené Hry</h2>
-                <div class="games-grid">
-                    <div class="game-card" onclick="spustHru('Mega-obby')">
-                        <div class="game-icon">🏃‍♂️</div>
-                        <div class="game-title">Mega Obby</div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">100 Levelů • Multiplayer</div>
-                    </div>
+        <header>
+            <h1>Netorikaraft</h1>
+            <div class="user-badge">
+                <div class="user-dot"></div>
+                <span id="localPlayerName">Načítání...</span>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <div>
+                <div class="section-title">🕹️ Dostupné hry</div>
+                <div class="games-grid" id="gamesContainer">
+                    <div style="color: #00f0ff;">Načítám hry z databáze...</div>
                 </div>
             </div>
 
-            <div class="glass-panel">
-                <h2>🎮 Všechny Hry</h2>
-                <div class="games-grid">
-                    <div class="game-card" onclick="spustHru('Mega-obby')">
-                        <div class="game-icon">🏃‍♂️</div>
-                        <div class="game-title">Mega Obby</div>
-                    </div>
-                    <div class="game-card" style="opacity: 0.3; cursor: not-allowed;">
-                        <div class="game-icon">⚔️</div>
-                        <div class="game-title">BedWars</div>
-                    </div>
-                    <div class="game-card" style="opacity: 0.3; cursor: not-allowed;">
-                        <div class="game-icon">🏹</div>
-                        <div class="game-title">SkyWars</div>
-                    </div>
+            <div class="sidebar">
+                <div class="section-title" style="color: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.3)">🟢 Kdo zrovna hraje</div>
+                <div class="player-list" id="playersContainer">
+                    <div class="no-players">Hledám aktivní hráče...</div>
                 </div>
-            </div>
-
-            <div class="glass-panel">
-                <h2>💬 Globální Chat</h2>
-                <div class="chat-box" id="chatBox"></div>
-                <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Napiš zprávu..." onkeydown="if(event.key === 'Enter') posliZpravu()">
-                    <button class="chat-send-btn" onclick="posliZpravu()">Odeslat</button>
-                </div>
-            </div>
-        </div>
-
-        <div>
-            <div class="glass-panel auth-box" id="authPanel">
-                <h2>🔐 Účet / Přihlášení</h2>
-                <input type="email" id="authEmail" placeholder="E-mail">
-                <input type="password" id="authPassword" placeholder="Heslo">
-                <div style="display: flex;">
-                    <button class="auth-btn login-btn" onclick="prihlasit()">Login</button>
-                    <button class="auth-btn register-btn" onclick="registrovat()">Sign In</button>
-                </div>
-            </div>
-
-            <div class="glass-panel">
-                <h2>👥 Aktivní Hráči</h2>
-                <div class="friends-list" id="friendsContainer">
-                    <div style="color: var(--text-muted); font-size: 0.9rem;">Načítám online hráče...</div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
-        <div class="glass-panel" style="background: linear-gradient(145deg, rgba(15,16,32,0.6), rgba(5,6,12,0.6));">
-            <span class="news-badge">Oznámení vedení</span>
-            <h1 class="news-title">Nový CEO Netorikaraft</h1>
-            <p class="news-content">
-                Herní síť a platforma <strong>Netorikaraft</strong> dnes oficiálně oznámila zásadní změnu ve své struktuře. 
-                Do čela společnosti nastupuje <strong>Tomáš Bdinka</strong>, který se stává novým výkonným ředitelem (CEO). 
-                Tomáš přichází s jasnou vizí modernizace celé sítě, implementace pokročilých multiplayerových frameworků v reálném čase a masivního rozšíření portfolia o herní pecky, jako je zbrusu nové stabilní 100-levelové Mega Obby.
-            </p>
-            <p class="news-content" style="margin-top: 10px;">
-                <i>"Naším cílem je vybudovat neprůstřelný a ultra moderní herní ekosystém, kde se hráči mohou propojovat bez lagů, okamžitě vidět aktivitu svých přátel a naskočit do akce na jedno kliknutí. Netorikaraft vstupuje do nové éry,"</i> prohlásil při inauguraci Tomáš Bdinka.
-            </p>
-            <div style="margin-top: 20px; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 20px;">
-                <span>📅 14. Června 2026</span>
-                <span>✍️ Tiskové oddělení Netorikaraft</span>
             </div>
         </div>
     </div>
 
     <script>
-        // --- KONFIGURACE SUPABASE ---
+        // --- 1. CONFIG SUPABASE ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let mujId = null;
-        let mojeJmeno = "Host";
-        let chatChannel = null;
+        let sb = null;
+        let mojeId = "guest_" + Math.floor(Math.random() * 10000);
+        let mujUsername = "Hráč_" + Math.floor(Math.random() * 900 + 100);
+        let globalGamesCache = []; // Uložiště stažených her pro párování tlačítka Připojit se
 
-        // --- NAVIGACE HER ---
-        function spustHru(slozkaHry) { 
-            // Absolutní cesta od rootu domény (stabilní řešení)
-            window.location.href = `/${slozkaHry}/`; 
-        }
-        
-        function joinHrac(nazevHry) {
-            if(!nazevHry || nazevHry === 'Lobby') return;
-            // Prevede napr "Mega Obby" na "mega-obby" a posle hrace tam
-            const slozka = nazevHry.toLowerCase().replace(/\s+/g, '-');
-            window.location.href = `/${slozka}/`;
+        try { 
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
+        } catch(e) { 
+            console.error("Chyba inicializace Supabase:", e); 
         }
 
-        // --- AUTHENTIKACE ---
-        async function prihlasit() {
-            const email = document.getElementById("authEmail").value;
-            const password = document.getElementById("authPassword").value;
-            const { data, error } = await sb.auth.signInWithPassword({ email, password });
-            if (error) alert("Chyba přihlášení: " + error.message);
-            else window.location.reload();
-        }
+        // --- 2. MULTIPLAYER A HEARTBEAT (UPDATE AKTIVNÍ HRY) ---
+        async function initHub() {
+            if(!sb) return;
 
-        async function registrovat() {
-            const email = document.getElementById("authEmail").value;
-            const password = document.getElementById("authPassword").value;
-            const nick = prompt("Zadej svou herní přezdívku (Bude vidět v Hubu):");
-            if(!nick) return;
+            // Uchování Guest ID v prohlížeči, aby se neměnilo při každém F5
+            if(localStorage.getItem('netorika_id')) mojeId = localStorage.getItem('netorika_id');
+            else localStorage.setItem('netorika_id', mojeId);
 
-            const { data, error } = await sb.auth.signUp({
-                email, password, options: { data: { display_name: nick } }
-            });
-            if (error) alert("Chyba registrace: " + error.message);
-            else alert("Registrace úspěšná! Zkontroluj e-mail nebo se rovnou přihlas.");
-        }
+            if(localStorage.getItem('netorika_name')) mujUsername = localStorage.getItem('netorika_name');
+            else localStorage.setItem('netorika_name', mujUsername);
 
-        // --- GLOBÁLNÍ CHAT ---
-        function pripojChat() {
-            chatChannel = sb.channel('globalni_chat');
-            chatChannel.on('broadcast', { event: 'msg' }, payload => {
-                zobrazZpravu(payload.payload.autor, payload.payload.text);
-            }).subscribe();
-        }
-
-        function zobrazZpravu(autor, text) {
-            const box = document.getElementById("chatBox");
-            const msg = document.createElement("div");
-            msg.className = "chat-msg";
-            msg.innerHTML = `<span class="author">${autor}:</span> ${text}`;
-            box.appendChild(msg);
-            box.scrollTop = box.scrollHeight;
-        }
-
-        async function posliZpravu() {
-            const inp = document.getElementById("chatInput");
-            if(!inp.value.trim() || !chatChannel) return;
-
-            await chatChannel.send({
-                type: 'broadcast', event: 'msg',
-                payload: { autor: mojeJmeno, text: inp.value }
-            });
-            zobrazZpravu(mojeJmeno, inp.value);
-            inp.value = "";
-        }
-
-        // --- STABILNÍ SYSTÉM HRÁČŮ & HEARTBEAT ---
-        async function updateMeStatus() {
-            if(!mujId) return;
-            await sb.from('online_players').upsert({
-                id: mujId, 
-                username: mojeJmeno, 
-                current_game: 'Lobby', 
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'id' });
-        }
-
-        async function inicializujHub() {
+            // Kontrola přihlášeného uživatele (pokud existuje)
             const { data: { user } } = await sb.auth.getUser();
-            
             if (user) {
-                mujId = user.id;
-                mojeJmeno = user.user_metadata.display_name || user.email;
-                document.getElementById("userTag").innerText = "👤 " + mojeJmeno;
-                
-                // Přepne UI na přihlášený stav
-                document.getElementById("authPanel").innerHTML = `
-                    <h2>🔐 Účet aktivní</h2>
-                    <p style="color: #cbd5e1; margin-bottom: 15px;">Jsi přihlášen jako <b style="color:var(--accent-cyan)">${mojeJmeno}</b>.</p>
-                    <button class="auth-btn register-btn" style="width:100%; border-color: #ff0055; color: #ff0055;" onclick="sb.auth.signOut().then(()=>location.reload())">Odhlásit se</button>
-                `;
-
-                // Počáteční zápis do databáze a zapnutí Heartbeatu (každých 10 sekund)
-                await updateMeStatus();
-                setInterval(updateMeStatus, 10000); 
+                mojeId = user.id;
+                mujUsername = user.user_metadata.display_name || user.email.split('@')[0];
             }
 
-            pripojChat();
+            document.getElementById("localPlayerName").innerText = mujUsername + " (Ty)";
 
-            // Funkce pro stažení aktivních hráčů
-            async function obnovSeznamHracu() {
-                // Filtruje "Duchy" - hráče, kteří neaktualizovali stav déle než 60 vteřin
-                const limitTime = new Date(Date.now() - 60000).toISOString();
+            // Funkce pro nahlášení, že jsem v HUBU
+            const updateMyStatus = async () => {
+                await sb.from('online_players').upsert({
+                    id: mojeId,
+                    username: mujUsername,
+                    current_game: "Hub", // Nastavení aktuální pozice
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+            };
 
-                const { data, error } = await sb
-                    .from('online_players')
-                    .select('*')
-                    .gte('updated_at', limitTime)
-                    .order('updated_at', { ascending: false });
+            await updateMyStatus();
+            setInterval(updateMyStatus, 8000); // Heartbeat každých 8 vteřin
 
-                const container = document.getElementById("friendsContainer");
+            // Načtení her a spuštění smyčky pro refresh online lidí
+            await loadGamesFromDatabase();
+            await refreshOnlinePlayers();
+            setInterval(refreshOnlinePlayers, 3000); // Obnovení seznamu lidí každé 3 vteřiny
+        }
+
+        // --- 3. NAČTIDÁNÍ HER Z TABULKY 'GAMES' ---
+        async function loadGamesFromDatabase() {
+            if(!sb) return;
+            try {
+                const { data, error } = await sb.from('games').select('*');
+                if (error) throw error;
+
+                globalGamesCache = data || [];
+                const container = document.getElementById("gamesContainer");
                 container.innerHTML = "";
 
-                if (error || !data || data.length <= (mujId ? 1 : 0)) {
-                    container.innerHTML = `<div style="color: var(--text-muted); font-size: 0.9rem; padding: 10px;">Žádní další hráči nejsou momentálně online.</div>`;
+                if (globalGamesCache.length === 0) {
+                    container.innerHTML = "<div style='color: #ff5555;'>V tabulce 'games' nebyly nalezeny žádné hry.</div>";
                     return;
                 }
 
-                data.forEach(hrac => {
-                    // Nevykreslovat sám sebe
-                    if (hrac.id === mujId) return;
-                    
-                    const item = document.createElement("div");
-                    item.className = "friend-item";
-                    const isPlaying = hrac.current_game && hrac.current_game !== 'Lobby';
-                    
-                    item.innerHTML = `
-                        <div>
-                            <div class="friend-name">${hrac.username}</div>
-                            <div class="friend-status ${isPlaying ? 'status-playing' : 'status-lobby'}">
-                                <span class="status-dot"></span>${isPlaying ? 'Hraje: ' + hrac.current_game : 'V Lobby'}
-                            </div>
-                        </div>
-                        ${isPlaying ? `<button class="join-btn" onclick="joinHrac('${hrac.current_game}')">Připojit</button>` : ''}
-                    `;
-                    container.appendChild(item);
-                });
-            }
+                globalGamesCache.forEach(game => {
+                    // game obsahuje: id, name, creator, url_part, emoji
+                    const card = document.createElement("div");
+                    card.className = "game-card";
+                    card.onclick = () => {
+                        window.location.href = game.url_part;
+                    };
 
-            // První načtení a pak auto-refresh každé 3 vteřiny
-            obnovSeznamHracu();
-            setInterval(obnovSeznamHracu, 3000);
+                    card.innerHTML = `
+                        <div class="game-emoji">${game.emoji || '🎮'}</div>
+                        <div class="game-name">${game.name}</div>
+                        <div class="game-creator">Autor: ${game.creator || 'Neznámý'}</div>
+                        <div class="play-tag">Spustit hru</div>
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Chyba při stahování tabulky games:", err);
+                document.getElementById("gamesContainer").innerHTML = "<div style='color: #ff5555;'>Nelze načíst seznam her.</div>";
+            }
         }
 
-        inicializujHub();
+        // --- 4. NAČÍTÁNÍ ONLINE HRÁČŮ A TLAČÍTKO PŘIPOJIT SE ---
+        async function refreshOnlinePlayers() {
+            if(!sb) return;
+            try {
+                const { data, error } = await sb.from('online_players').select('*');
+                if (error) throw error;
+
+                const container = document.getElementById("playersContainer");
+                container.innerHTML = "";
+
+                const nyní = Date.now();
+                let nekdoOnline = false;
+
+                data.forEach(player => {
+                    // Odfiltrujeme sami sebe a lidi, co neodpověděli déle než 25 vteřin (offline)
+                    const casZmeny = Date.parse(player.updated_at);
+                    if (player.id === mojeId || (nyní - casZmeny > 25000)) return;
+
+                    nekdoOnline = true;
+                    const row = document.createElement("div");
+                    row.className = "player-row";
+
+                    const isInGame = player.current_game && player.current_game !== "Hub" && player.current_game !== "Lobby";
+                    
+                    // Najdeme hru v cache, abychom získali její přesné url_part
+                    const prirazenaHra = globalGamesCache.find(g => g.name.toLowerCase() === player.current_game.toLowerCase());
+
+                    let actionHtml = "";
+                    if (isInGame && prirazenaHra) {
+                        // Pokud hraje hru, která existuje v tabulce games, vytvoříme 100% funkční Join Button
+                        actionHtml = `<button class="join-btn" onclick="window.location.href='${prirazenaHra.url_part}'">Připojit se</button>`;
+                    }
+
+                    row.innerHTML = `
+                        <div class="player-info">
+                            <div class="player-name">${player.username}</div>
+                            <div class="player-game ${!isInGame ? 'in-hub' : ''}">${isInGame ? 'Hraje: ' + player.current_game : 'Prohlíží Hub'}</div>
+                        </div>
+                        ${actionHtml}
+                    `;
+                    container.appendChild(row);
+                });
+
+                if (!nekdoOnline) {
+                    container.innerHTML = `<div class="no-players">Momentálně tu nikdo další není.</div>`;
+                }
+
+            } catch (err) {
+                console.error("Chyba při načítání hráčů:", err);
+            }
+        }
+
+        // Spuštění Hubu při načtení stránky
+        window.onload = initHub;
     </script>
 </body>
 </html>
