@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Netorikaraft - Hardcore Mega Obby</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background-color: #050508;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hud-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00f0ff;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        #mobileControls {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 50px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .touch-zone {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 240, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        #joystickBound {
+            width: 140px;
+            height: 140px;
+            position: relative;
+        }
+        #joystickThumb {
+            width: 65px;
+            height: 65px;
+            background: rgba(0, 240, 255, 0.85);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            transition: transform 0.03s linear;
+        }
+        #jumpBtn {
+            width: 120px;
+            height: 120px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 10px #00f0ff;
+            font-size: 1.4rem;
+            background: rgba(0, 240, 255, 0.15);
+        }
+        #jumpBtn:active {
+            background: rgba(0, 240, 255, 0.4);
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="hud-text" id="levelDisplay">Level: 1 / 100</div>
+        <div class="hud-text" style="color: #ff0055; text-shadow: 0 0 10px rgba(255, 0, 85, 0.5);" id="deathsDisplay">Smrti: 0</div>
+        <div class="hud-text" style="color: #00ff66; font-size: 0.9rem;" id="playersOnlineCount">Hráči v místnosti: 1</div>
+        <button onclick="window.location.href='../'" style="margin-top: 15px; padding: 8px 15px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; cursor: pointer; pointer-events: auto;">Zpět do Hubu</button>
+    </div>
+
+    <div id="mobileControls">
+        <div class="touch-zone" id="joystickBound">
+            <div id="joystickThumb"></div>
+        </div>
+        <div class="touch-zone" id="jumpBtn">SKOK</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- 1. SUPABASE MULTIPLAYER ---
+        const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
+        const NAZEV_HRY = "Mega Obby";
+
+        let sb = null;
+        let mpChannel = null;
+        let mojeId = "guest_" + Math.floor(Math.random() * 10000);
+        let mujUsername = "Hráč";
+        let remotePlayers = {}; 
+
+        try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error(e); }
+
+        async function initMultiplayer() {
+            if(!sb) return;
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                mojeId = user.id;
+                mujUsername = user.user_metadata.display_name || "Hráč";
+                
+                const updateStatus = async (status) => {
+                    await sb.from('online_players').upsert({
+                        id: mojeId, username: mujUsername, current_game: status, updated_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
+                };
+                
+                await updateStatus(NAZEV_HRY);
+                setInterval(() => updateStatus(NAZEV_HRY), 10000);
+                window.addEventListener('beforeunload', () => updateStatus('Lobby'));
+            }
+
+            mpChannel = sb.channel('obby_multiplayer', { config: { broadcast: { self: false } } });
+            mpChannel.on('broadcast', { event: 'move' }, payload => {
+                remotePlayers[payload.payload.id] = payload.payload;
+                remotePlayers[payload.payload.id].lastSeen = Date.now();
+            }).subscribe();
+
+            setInterval(() => {
+                const now = Date.now();
+                for (let id in remotePlayers) {
+                    if (now - remotePlayers[id].lastSeen > 3000) delete remotePlayers[id];
+                }
+                document.getElementById("playersOnlineCount").innerText = "Hráči v místnosti: " + (Object.keys(remotePlayers).length + 1);
+            }, 1000);
+        }
+        initMultiplayer();
+
+        // --- 2. CANVAS & OVLÁDÁNÍ ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById("mobileControls").style.display = "flex";
+            }
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        const keys = { Left: false, Right: false, Up: false };
+        window.addEventListener("keydown", (e) => {
+            if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = true;
+            if(e.code === "ArrowRight" || e.code === "KeyD") keys.Right = true;
+            if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") { keys.Up = true; e.preventDefault(); }
+        });
+        window.addEventListener("keyup", (e) => {
+            if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = false;
+            if(e.code === "ArrowRight" || e.code === "KeyD") keys.Right = false;
+            if(e.code === "ArrowUp" || e.code === "Space" || e.code === "KeyW") keys.Up = false;
+        });
+
+        const player = {
+            x: 100, y: 300, vx: 0, vy: 0, width: 22, height: 22,
+            speed: 0.9, maxVx: 6.8, friction: 0.84,
+            gravity: 0.62, jumpForce: -13.0,
+            grounded: false, deaths: 0, color: "#00f0ff"
+        };
+
+        let currentLevel = 0;
+        let checkpoint = { x: 100, y: 300 };
+        let camera = { x: 0, y: 0 };
+        let particles = [];
+
+        // --- 3. INTELIGENTNÍ HARDCORE GENERÁTOR (OPRAVENÝ) ---
+        function generujHardcoreLevely() {
+            const levels = [];
+            for (let i = 0; i < 100; i++) {
+                const platforms = [];
+                platforms.push({ x: 0, y: 420, w: 160, h: 200, type: 'block', color: '#161925' });
+                
+                let curX = 160;
+                let curY = 420;
+                const numJumps = 6 + Math.floor(i / 8);
+                
+                for (let j = 0; j < numJumps; j++) {
+                    let platformWidth = Math.max(80 - (i * 0.75), 32);
+                    
+                    let gapX = 110 + Math.random() * Math.min(35 + i, 55); 
+                    let gapY = (Math.random() - 0.45) * Math.min(60 + (i * 1.8), 130);
+
+                    // ROZHODNUTÍ O TYPU BLOKU PŘEDEM PRO BEZPEČNOST SKOKŮ
+                    let typ = 'block';
+                    let barva = '#161925';
+
+                    if (j === Math.floor(numJumps / 2) && j > 1) {
+                        typ = 'checkpoint'; barva = '#00ff66'; platformWidth = 45;
+                    } 
+                    else if (i > 3 && Math.random() < 0.38) {
+                        typ = 'lava'; barva = '#ff0055'; platformWidth = Math.max(platformWidth - 8, 25);
+                    }
+
+                    // OPRAVA PRO LEVEL 5 A VŠECHNY OSTATNÍ: Pokud skočíš na lávu nebo z lávy, omezíme mezeru na férové maximum
+                    if (typ === 'lava' || (platforms[platforms.length - 1] && platforms[platforms.length - 1].type === 'lava')) {
+                        gapX = 100 + Math.random() * 20; // Max 120px, matematicky 100% skočitelné
+                        if (gapY < -30) gapY = -30;     // Zákaz brutálního skákání do ostrého kopce u lávy
+                    }
+
+                    curX += gapX; curY += gapY;
+
+                    if (curY > 620) curY = 520;
+                    if (curY < 120) curY = 220;
+
+                    if (typ === 'block' && i > 8 && Math.random() < 0.45 && typ !== 'checkpoint') {
+                        let speed = 0.015 + (i * 0.00025);
+                        let mX = Math.random() > 0.5 ? 70 + (Math.random() * 50) : 0;
+                        let mY = mX === 0 ? 80 + (Math.random() * 40) : 0;
+                        
+                        platforms.push({
+                            x: curX, y: curY, w: platformWidth, h: 18, type: 'block', color: '#0077ff',
+                            moveY: mY, moveX: mX, speed: speed, startX: curX, startY: curY, isMoving: true,
+                            activated: false
+                        });
+                        curX += platformWidth;
+                        continue;
+                    }
+
+                    platforms.push({ x: curX, y: curY, w: platformWidth, h: 18, type: typ, color: barva, activated: false });
+                    curX += platformWidth;
+                }
+
+                platforms.push({ x: curX + 110, y: curY - 30, w: 120, h: 300, type: 'finish', color: '#ffaa00' });
+                levels.push(platforms);
+            }
+            return levels;
+        }
+
+        const megaLevels = generujHardcoreLevely();
+
+        function spawnParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                particles.push({
+                    x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                    radius: Math.random() * 3 + 2, alpha: 1, color
+                });
+            }
+        }
+
+        function restartPlayer() {
+            spawnParticles(player.x + player.width/2, player.y + player.height/2, "#ff0055", 25);
+            player.x = checkpoint.x; player.y = checkpoint.y;
+            player.vx = 0; player.vy = 0;
+            player.deaths++;
+            document.getElementById("deathsDisplay").innerText = "Smrti: " + player.deaths;
+        }
+
+        function loadLevel(index) {
+            if (index >= 100) {
+                alert("🏆 Konec hry!"); index = 0; player.deaths = 0;
+            }
+            currentLevel = index;
+            document.getElementById("levelDisplay").innerText = `Level: ${currentLevel + 1} / 100`;
+            const lvl = megaLevels[currentLevel];
+            checkpoint = { x: lvl[0].x + 30, y: lvl[0].y - 50 };
+            player.x = checkpoint.x; player.y = checkpoint.y;
+            player.vx = 0; player.vy = 0;
+        }
+        loadLevel(0);
+
+        // --- 4. VYLEPŠENÉ A PRECYZNÍ MOBILNÍ OVLÁDÁNÍ ---
+        const joyBound = document.getElementById("joystickBound");
+        const joyThumb = document.getElementById("joystickThumb");
+        const jumpBtn = document.getElementById("jumpBtn");
+        let joyActive = false, joyCenterX = 0;
+
+        joyBound.addEventListener("touchstart", (e) => {
+            joyActive = true;
+            joyCenterX = joyBound.getBoundingClientRect().left + 70; // Přesný střed zvětšeného kruhu
+        }, { passive: true });
+
+        joyBound.addEventListener("touchmove", (e) => {
+            if(!joyActive) return;
+            let displayDelta = Math.max(-42, Math.min(42, e.touches[0].clientX - joyCenterX));
+            joyThumb.style.transform = `translateX(${displayDelta}px)`;
+            
+            // Vyšší citlivost na pohyb (stačí menší výchylka pro plný běh)
+            if(displayDelta / 42 < -0.12) { keys.Left = true; keys.Right = false; }
+            else if(displayDelta / 42 > 0.12) { keys.Right = true; keys.Left = false; }
+            else { keys.Left = false; keys.Right = false; }
+        }, { passive: true });
+
+        const resetJoy = () => { joyActive = false; joyThumb.style.transform = "translateX(0px)"; keys.Left = false; keys.Right = false; };
+        joyBound.addEventListener("touchend", resetJoy, { passive: true });
+        joyBound.addEventListener("touchcancel", resetJoy, { passive: true });
+
+        // Skok reaguje okamžitě bez ohledu na stav joysticku
+        jumpBtn.addEventListener("touchstart", (e) => { keys.Up = true; }, { passive: true });
+        jumpBtn.addEventListener("touchend", () => { keys.Up = false; }, { passive: true });
+
+        // --- 5. STABILNÍ FYZIKA ENGINE ---
+        let lastBroadcast = 0;
+        function update() {
+            if (keys.Left) player.vx -= player.speed;
+            if (keys.Right) player.vx += player.speed;
+            player.vx *= player.friction;
+            if(player.vx > player.maxVx) player.vx = player.maxVx;
+            if(player.vx < -player.maxVx) player.vx = -player.maxVx;
+            player.vy += player.gravity;
+
+            if (keys.Up && player.grounded) {
+                player.vy = player.jumpForce; player.grounded = false;
+                spawnParticles(player.x + player.width/2, player.y + player.height, "#00f0ff", 8);
+            }
+            
+            const plats = megaLevels[currentLevel];
+            let standingOn = null;
+
+            plats.forEach(p => {
+                if (p.isMoving) {
+                    p.lastX = p.x; p.lastY = p.y;
+                    if (p.moveX) p.x = p.startX + Math.sin(Date.now() * p.speed) * p.moveX;
+                    if (p.moveY) p.y = p.startY + Math.sin(Date.now() * p.speed) * p.moveY;
+                    p.dx = p.x - p.lastX; p.dy = p.y - p.lastY;
+                    if (player.y + player.height >= p.lastY && player.y + player.height <= p.lastY + 3 &&
+                        player.x + player.width > p.lastX && player.x < p.lastX + p.w) {
+                        standingOn = p;
+                    }
+                }
+            });
+
+            if (standingOn) { player.x += standingOn.dx; player.y += standingOn.dy; }
+            player.grounded = false;
+
+            // X-Kolize
+            player.x += player.vx;
+            for(let p of plats) {
+                if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
+                    if (p.type === 'lava') { restartPlayer(); break; }
+                    if (p.type === 'block' || p.type === 'checkpoint') {
+                        if (player.vx > 0) player.x = p.x - player.width;
+                        else if (player.vx < 0) player.x = p.x + p.w;
+                        player.vx = 0;
+                    }
+                }
+            }
+
+            // Y-Kolize
+            player.y += player.vy;
+            for(let p of plats) {
+                if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
+                    if (p.type === 'lava') { restartPlayer(); break; }
+                    
+                    if (p.type === 'block' || p.type === 'checkpoint') {
+                        if (player.vy > 0) {
+                            player.y = p.y - player.height; player.vy = 0; player.grounded = true;
+                        } else if (player.vy < 0) {
+                            player.y = p.y + p.h; player.vy = 0;
+                        }
+                    }
+
+                    if (p.type === 'checkpoint' && !p.activated) {
+                        p.activated = true;
+                        checkpoint = { x: p.x + 10, y: p.y - 40 }; 
+                        p.color = "#00ffcc"; 
+                        spawnParticles(p.x + p.w/2, p.y, "#00ffcc", 15);
+                    }
+                    if (p.type === 'finish') { loadLevel(currentLevel + 1); break; }
+                }
+            }
+
+            if (player.y > camera.y + canvas.height + 150) restartPlayer();
+
+            camera.x += (player.x - canvas.width / 3 - camera.x) * 0.08;
+            camera.y += (player.y - canvas.height / 1.8 - camera.y) * 0.08;
+
+            particles.forEach((pt, idx) => {
+                pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 0.03;
+                if(pt.alpha <= 0) particles.splice(idx, 1);
+            });
+
+            if (mpChannel && Date.now() - lastBroadcast > 50) {
+                mpChannel.send({ type: 'broadcast', event: 'move', payload: { id: mojeId, name: mujUsername, x: player.x, y: player.y, lvl: currentLevel }});
+                lastBroadcast = Date.now();
+            }
+        }
+
+        // --- 6. VYKRESLOVÁNÍ ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "rgba(0, 240, 255, 0.04)"; ctx.lineWidth = 1;
+            let mriza = 60, sX = Math.floor(camera.x / mriza) * mriza, sY = Math.floor(camera.y / mriza) * mriza;
+            for (let x = sX; x < sX + canvas.width + mriza; x += mriza) { ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, canvas.height); ctx.stroke(); }
+            for (let y = sY; y < sY + canvas.height + mriza; y += mriza) { ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(canvas.width, y - camera.y); ctx.stroke(); }
+
+            ctx.save(); ctx.translate(-camera.x, -camera.y);
+
+            megaLevels[currentLevel].forEach(p => {
+                ctx.shadowBlur = (p.type !== 'block' || p.isMoving) ? 15 : 0;
+                ctx.shadowColor = p.color; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 4); ctx.fill();
+            });
+
+            ctx.shadowBlur = 10;
+            particles.forEach(pt => {
+                ctx.shadowColor = pt.color; ctx.fillStyle = pt.color; ctx.globalAlpha = pt.alpha;
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI*2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            for (let id in remotePlayers) {
+                let rp = remotePlayers[id];
+                if (rp.lvl === currentLevel) {
+                    ctx.shadowBlur = 15; ctx.shadowColor = "#ff00ff"; ctx.fillStyle = "rgba(255, 0, 255, 0.7)";
+                    ctx.beginPath(); ctx.roundRect(rp.x, rp.y, 22, 22, 5); ctx.fill();
+                    ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
+                    ctx.fillText(rp.name, rp.x + 11, rp.y - 10);
+                }
+            }
+
+            ctx.shadowBlur = 20; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
+            ctx.beginPath(); ctx.roundRect(player.x, player.y, player.width, player.height, 5); ctx.fill();
+            ctx.restore();
+        }
+
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
