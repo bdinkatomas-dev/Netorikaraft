@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Netorikaraft - Mega PvP Arena & Shop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body {
+            background-color: #050508;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* --- HUD --- */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hud-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00f0ff;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+            margin-bottom: 5px;
+        }
+        
+        /* --- TLAČÍTKA V HUDU --- */
+        .hud-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: rgba(0, 240, 255, 0.15);
+            color: white;
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            cursor: pointer;
+            pointer-events: auto;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+            transition: all 0.2s;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        .hud-btn:hover {
+            background: #00f0ff;
+            color: #000;
+            box-shadow: 0 0 15px #00f0ff;
+        }
+        #shopBtn {
+            background: rgba(216, 0, 255, 0.2);
+            border-color: rgba(216, 0, 255, 0.4);
+            text-shadow: 0 0 10px #d800ff;
+        }
+        #shopBtn:hover {
+            background: #d800ff;
+            color: #fff;
+            box-shadow: 0 0 15px #d800ff;
+        }
+
+        /* --- SHOP MODAL OKNO --- */
+        #shopModal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 550px;
+            background: rgba(10, 11, 22, 0.95);
+            border: 2px solid #d800ff;
+            box-shadow: 0 0 30px rgba(216, 0, 255, 0.4);
+            border-radius: 16px;
+            padding: 25px;
+            display: none;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .shop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(216, 0, 255, 0.3);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .shop-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #d800ff;
+            text-shadow: 0 0 10px rgba(216, 0, 255, 0.5);
+            text-transform: uppercase;
+        }
+        .close-shop {
+            background: none;
+            border: none;
+            color: #ff0055;
+            font-size: 1.8rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .shop-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            transition: 0.2s;
+        }
+        .shop-item.equipped {
+            border-color: #00ff66;
+            background: rgba(0, 255, 102, 0.04);
+        }
+        .item-info { display: flex; flex-direction: column; gap: 3px; }
+        .item-name { font-weight: bold; font-size: 1.1rem; }
+        .item-stats { font-size: 0.8rem; color: #8a8f9f; }
+        .buy-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: 0.2s;
+        }
+        .buy-btn.buy { background: #d800ff; color: white; }
+        .buy-btn.equip { background: #00f0ff; color: black; }
+        .buy-btn.active { background: #00ff66; color: black; cursor: default; }
+
+        /* --- MOBILNÍ OVLÁDÁNÍ --- */
+        #mobileControls {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 40px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .touch-zone {
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 240, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        #joystickBound { width: 140px; height: 140px; position: relative; }
+        #joystickThumb {
+            width: 65px; height: 65px;
+            background: rgba(0, 240, 255, 0.85);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+            position: absolute; top: 35px; left: 35px;
+            transition: transform 0.03s linear;
+        }
+        .action-btns { display: flex; gap: 20px; }
+        #jumpBtn, #attackBtn { width: 110px; height: 110px; font-weight: 900; color: #fff; font-size: 1.2rem; }
+        #jumpBtn { text-shadow: 0 0 10px #00f0ff; background: rgba(0, 240, 255, 0.15); }
+        #attackBtn { text-shadow: 0 0 10px #ff0055; background: rgba(255, 0, 85, 0.15); border: 2px solid rgba(255, 0, 85, 0.2); }
+        #jumpBtn:active, #attackBtn:active { transform: scale(0.95); }
+        #jumpBtn:active { background: rgba(0, 240, 255, 0.4); }
+        #attackBtn:active { background: rgba(255, 0, 85, 0.4); }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="hud-text" id="hpDisplay" style="color: #00ff66; text-shadow: 0 0 10px rgba(0, 255, 102, 0.5);">HP: 100</div>
+        <div class="hud-text" id="coinsDisplay" style="color: #ffcc00; text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);">Mince: 0 🪙</div>
+        <div class="hud-text" style="color: #ffaa00; font-size: 1rem;" id="killsDisplay">Zabití: 0</div>
+        <div class="hud-text" style="color: #ff0055; font-size: 1rem;" id="deathsDisplay">Smrti: 0</div>
+        <div class="hud-text" style="color: #bc00ff; font-size: 0.85rem;" id="opponentDisplay">Režim: Trénink s Botem</div>
+        
+        <button class="hud-btn" id="shopBtn" onclick="toggleShop(true)">🛒 Zbraně Shop</button>
+        <button class="hud-btn" onclick="window.location.href='../'">Odejít</button>
+    </div>
+
+    <div id="shopModal">
+        <div class="shop-header">
+            <div class="shop-title">Kybernetická Zbrojnice</div>
+            <button class="close-shop" onclick="toggleShop(false)">✕</button>
+        </div>
+        <div class="shop-grid" id="shopItemsContainer">
+            </div>
+    </div>
+
+    <div id="mobileControls">
+        <div class="touch-zone" id="joystickBound">
+            <div id="joystickThumb"></div>
+        </div>
+        <div class="action-btns">
+            <div class="touch-zone" id="attackBtn">ÚTOK</div>
+            <div class="touch-zone" id="jumpBtn">SKOK</div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // --- 1. SUPABASE MULTIPLAYER ---
+        const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
+        const NAZEV_HRY = "PvP Arena";
+
+        let sb = null, pvpChannel = null;
+        let mojeId = "guest_" + Math.floor(Math.random() * 10000);
+        let mujUsername = "Hráč";
+        let remotePlayers = {};
+        let botActive = true;
+
+        try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+
+        async function initMultiplayer() {
+            if(!sb) return;
+            const { data: { user } } = await sb.auth.getUser();
+            if (user) {
+                mojeId = user.id;
+                mujUsername = user.user_metadata.display_name || "Hráč";
+                const updateStatus = async (status) => {
+                    await sb.from('online_players').upsert({ id: mojeId, username: mujUsername, current_game: status, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+                };
+                await updateStatus(NAZEV_HRY);
+                setInterval(() => updateStatus(NAZEV_HRY), 10000);
+            }
+
+            pvpChannel = sb.channel('pvp_arena_channel', { config: { broadcast: { self: false } } });
+            pvpChannel.on('broadcast', { event: 'sync' }, payload => {
+                remotePlayers[payload.payload.id] = payload.payload;
+                remotePlayers[payload.payload.id].lastSeen = Date.now();
+            });
+            pvpChannel.on('broadcast', { event: 'hit' }, payload => {
+                if (payload.payload.targetId === mojeId) takeDamage(payload.payload.damage);
+            });
+            pvpChannel.subscribe();
+
+            setInterval(() => {
+                const now = Date.now();
+                for (let id in remotePlayers) {
+                    if (now - remotePlayers[id].lastSeen > 3000) delete remotePlayers[id];
+                }
+                if (Object.keys(remotePlayers).length > 0) {
+                    botActive = false;
+                    document.getElementById("opponentDisplay").innerText = "Režim: LIVE PvP Zápas";
+                    document.getElementById("opponentDisplay").style.color = "#00ff66";
+                } else {
+                    botActive = true;
+                    document.getElementById("opponentDisplay").innerText = "Režim: Trénink s Botem";
+                    document.getElementById("opponentDisplay").style.color = "#bc00ff";
+                }
+            }, 1000);
+        }
+        initMultiplayer();
+
+        // --- 2. DATA ZBRANÍ & DEFINICE ---
+        const WEAPONS = {
+            dagger: { id: 'dagger', name: 'Neonová Dýka', dmg: 25, range: 42, cd: 28, price: 0, color: '#ff0055' },
+            katana: { id: 'katana', name: 'Laserová Katana', dmg: 35, range: 62, cd: 22, price: 40, color: '#00ff66' },
+            hammer: { id: 'hammer', name: 'Kyber Kladivo', dmg: 55, range: 48, cd: 48, price: 75, color: '#ffaa00' },
+            scythe: { id: 'scythe', name: 'Plazmová Kosa', dmg: 45, range: 76, cd: 18, price: 120, color: '#bc00ff' }
+        };
+
+        // --- 3. CANVAS & PROSTŘEDÍ ---
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if('ontouchstart' in window || navigator.maxTouchPoints > 0) document.getElementById("mobileControls").style.display = "flex";
+        }
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        const keys = { Left: false, Right: false, Up: false };
+        window.addEventListener("keydown", (e) => {
+            if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = true;
+            if(e.code === "ArrowRight" || e.code === "KeyD") keys.Right = true;
+            if(e.code === "ArrowUp" || e.code === "KeyW") { keys.Up = true; e.preventDefault(); }
+            if(e.code === "Space" || e.code === "KeyF") { triggerAttack(); e.preventDefault(); }
+        });
+        window.addEventListener("keyup", (e) => {
+            if(e.code === "ArrowLeft" || e.code === "KeyA") keys.Left = false;
+            if(e.code === "ArrowRight" || e.code === "KeyD") keys.Right = false;
+            if(e.code === "ArrowUp" || e.code === "KeyW") keys.Up = false;
+        });
+
+        // --- Hráč Inicializace ---
+        const player = {
+            x: 200, y: 200, vx: 0, vy: 0, width: 24, height: 24,
+            speed: 0.85, maxVx: 6.5, friction: 0.84, gravity: 0.6, jumpForce: -12.5,
+            grounded: false, hp: 100, kills: 0, deaths: 0, coins: 0, color: "#00f0ff",
+            facing: 1, isAttacking: false, attackTimer: 0, attackCooldown: 0,
+            activeWeapon: 'dagger', ownedWeapons: ['dagger']
+        };
+
+        const bot = {
+            x: 800, y: 200, vx: 0, vy: 0, width: 24, height: 24,
+            speed: 0.55, maxVx: 4.5, friction: 0.84, gravity: 0.6, jumpForce: -12.5,
+            grounded: false, hp: 100, color: "#e300ff", facing: -1, isAttacking: false, attackTimer: 0,
+            cooldown: 0
+        };
+
+        const mapPlatforms = [
+            { x: 50, y: 550, w: 1200, h: 40, color: "#161925" },
+            { x: 150, y: 420, w: 250, h: 15, color: "#161925" },
+            { x: 900, y: 420, w: 250, h: 15, color: "#161925" },
+            { x: 450, y: 300, w: 400, h: 15, color: "#161925" },
+            { x: 200, y: 180, w: 180, h: 15, color: "#161925" },
+            { x: 920, y: 180, w: 180, h: 15, color: "#161925" }
+        ];
+
+        let spawnedCoins = [];
+        let camera = { x: 0, y: 0 };
+        let particles = [];
+
+        function spawnParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                particles.push({ x, y, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, radius: Math.random() * 3 + 2, alpha: 1, color });
+            }
+        }
+
+        // Generování mincí po mapě periodicicky
+        setInterval(() => {
+            if (spawnedCoins.length < 5) {
+                spawnedCoins.push({
+                    x: 100 + Math.random() * 1100,
+                    y: 100 + Math.random() * 400,
+                    pulse: 0
+                });
+            }
+        }, 6000);
+
+        // --- 4. LOGIKA OBCHODU ---
+        function toggleShop(open) {
+            document.getElementById("shopModal").style.display = open ? "block" : "none";
+            if (open) renderShop();
+        }
+
+        function renderShop() {
+            const container = document.getElementById("shopItemsContainer");
+            container.innerHTML = "";
+            
+            Object.values(WEAPONS).forEach(w => {
+                const isOwned = player.ownedWeapons.includes(w.id);
+                const isActive = player.activeWeapon === w.id;
+                
+                const itemRow = document.createElement("div");
+                itemRow.className = `shop-item ${isActive ? 'equipped' : ''}`;
+                
+                let btnHtml = "";
+                if (isActive) {
+                    btnHtml = `<button class="buy-btn active">Vybaveno</button>`;
+                } else if (isOwned) {
+                    btnHtml = `<button class="buy-btn equip" onclick="equipWeapon('${w.id}')">Vybavit</button>`;
+                } else {
+                    btnHtml = `<button class="buy-btn buy" onclick="buyWeapon('${w.id}')">${w.price} 🪙</button>`;
+                }
+
+                itemRow.innerHTML = `
+                    <div class="item-info">
+                        <div class="item-name" style="color: ${w.color}">${w.name}</div>
+                        <div class="item-stats">Poškození: ${w.dmg} | Dosah: ${w.range}px | Rychlost: ${Math.floor(100/w.cd)}</div>
+                    </div>
+                    ${btnHtml}
+                `;
+                container.appendChild(itemRow);
+            });
+        }
+
+        function buyWeapon(id) {
+            const w = WEAPONS[id];
+            if (player.coins >= w.price && !player.ownedWeapons.includes(id)) {
+                player.coins -= w.price;
+                player.ownedWeapons.push(id);
+                player.activeWeapon = id;
+                document.getElementById("coinsDisplay").innerText = "Mince: " + player.coins + " 🪙";
+                renderShop();
+            }
+        }
+
+        function equipWeapon(id) {
+            if (player.ownedWeapons.includes(id)) {
+                player.activeWeapon = id;
+                renderShop();
+            }
+        }
+
+        // --- 5. ÚTOK SYSTÉM ---
+        function triggerAttack() {
+            if (player.isAttacking || player.attackCooldown > 0) return;
+            
+            const weapon = WEAPONS[player.activeWeapon];
+            player.isAttacking = true;
+            player.attackTimer = 8;
+            player.attackCooldown = weapon.cd;
+            
+            spawnParticles(player.x + (player.facing === 1 ? player.width + 10 : -10), player.y + 12, weapon.color, 6);
+            
+            let ax = player.facing === 1 ? player.x + player.width : player.x - weapon.range;
+
+            if (botActive) {
+                if (ax < bot.x + 24 && ax + weapon.range > bot.x && player.y - 15 < bot.y + 24 && player.y + 44 > bot.y) {
+                    bot.hp -= weapon.dmg;
+                    spawnParticles(bot.x + 12, bot.y + 12, weapon.color, 15);
+                    if (bot.hp <= 0) {
+                        bot.hp = 100; bot.x = 100 + Math.random() * 1000; bot.y = 100;
+                        player.kills++;
+                        player.coins += 20; // Odměna za zabití
+                        document.getElementById("killsDisplay").innerText = "Zabití: " + player.kills;
+                        document.getElementById("coinsDisplay").innerText = "Mince: " + player.coins + " 🪙";
+                        spawnParticles(bot.x, bot.y, "#bc00ff", 30);
+                    }
+                }
+            } else {
+                for (let id in remotePlayers) {
+                    let rp = remotePlayers[id];
+                    if (ax < rp.x + 24 && ax + weapon.range > rp.x && player.y - 15 < rp.y + 24 && player.y + 44 > rp.y) {
+                        if (pvpChannel) pvpChannel.send({ type: 'broadcast', event: 'hit', payload: { targetId: id, damage: weapon.dmg } });
+                    }
+                }
+            }
+        }
+
+        function takeDamage(amount) {
+            player.hp -= amount;
+            if (player.hp <= 0) {
+                player.hp = 100; player.deaths++;
+                player.x = 100 + Math.random() * 1000; player.y = 100;
+                player.vx = 0; player.vy = 0;
+                document.getElementById("deathsDisplay").innerText = "Smrti: " + player.deaths;
+            }
+            document.getElementById("hpDisplay").innerText = "HP: " + player.hp;
+            spawnParticles(player.x + 12, player.y + 12, "#ff0055", 15);
+        }
+
+        // --- 6. MOBILNÍ TOUCH OVLÁDÁNÍ ---
+        const joyBound = document.getElementById("joystickBound"), joyThumb = document.getElementById("joystickThumb");
+        let joyActive = false, joyCenterX = 0;
+
+        joyBound.addEventListener("touchstart", (e) => { joyActive = true; joyCenterX = joyBound.getBoundingClientRect().left + 70; }, { passive: true });
+        joyBound.addEventListener("touchmove", (e) => {
+            if(!joyActive) return;
+            let delta = Math.max(-42, Math.min(42, e.touches[0].clientX - joyCenterX));
+            joyThumb.style.transform = `translateX(${delta}px)`;
+            if(delta / 42 < -0.15) { keys.Left = true; keys.Right = false; player.facing = -1; }
+            else if(delta / 42 > 0.15) { keys.Right = true; keys.Left = false; player.facing = 1; }
+            else { keys.Left = false; keys.Right = false; }
+        }, { passive: true });
+        joyBound.addEventListener("touchend", () => { joyActive = false; joyThumb.style.transform = "translateX(0px)"; keys.Left = false; keys.Right = false; }, { passive: true });
+        document.getElementById("jumpBtn").addEventListener("touchstart", () => { keys.Up = true; }, { passive: true });
+        document.getElementById("jumpBtn").addEventListener("touchend", () => { keys.Up = false; }, { passive: true });
+        document.getElementById("attackBtn").addEventListener("touchstart", () => { triggerAttack(); }, { passive: true });
+
+        // --- 7. ENGINE (FYZIKA & AI) ---
+        let lastBroadcast = 0;
+        function update() {
+            // Hráč pohyb fypzika
+            if (keys.Left) { player.vx -= player.speed; player.facing = -1; }
+            if (keys.Right) { player.vx += player.speed; player.facing = 1; }
+            player.vx *= player.friction; player.vy += player.gravity;
+            if (keys.Up && player.grounded) { player.vy = player.jumpForce; player.grounded = false; }
+            
+            if (player.isAttacking) { player.attackTimer--; if (player.attackTimer <= 0) player.isAttacking = false; }
+            if (player.attackCooldown > 0) player.attackCooldown--;
+
+            // Sběr mincí na mapě
+            spawnedCoins.forEach((c, idx) => {
+                c.pulse += 0.08;
+                let distHrac = Math.hypot((player.x + 12) - c.x, (player.y + 12) - c.y);
+                if (distHrac < 26) {
+                    player.coins += 5;
+                    document.getElementById("coinsDisplay").innerText = "Mince: " + player.coins + " 🪙";
+                    spawnParticles(c.x, c.y, "#ffcc00", 12);
+                    spawnedCoins.splice(idx, 1);
+                }
+            });
+
+            // Inteligentní AI BOT
+            if (botActive) {
+                if (player.x < bot.x) { bot.vx -= bot.speed; bot.facing = -1; }
+                else if (player.x > bot.x) { bot.vx += bot.speed; bot.facing = 1; }
+                if (bot.grounded && (player.y < bot.y - 45 || Math.random() < 0.012)) { bot.vy = bot.jumpForce; bot.grounded = false; }
+                bot.vx *= bot.friction; bot.vy += bot.gravity;
+
+                if (bot.isAttacking) { bot.attackTimer--; if (bot.attackTimer <= 0) bot.isAttacking = false; }
+                if (bot.cooldown > 0) bot.cooldown--;
+
+                if (Math.abs(player.x - bot.x) < 45 && Math.abs(player.y - bot.y) < 30 && bot.cooldown === 0) {
+                    bot.isAttacking = true; bot.attackTimer = 10; bot.cooldown = 35;
+                    takeDamage(20);
+                }
+            }
+
+            player.grounded = false; if (botActive) bot.grounded = false;
+
+            // Systém Kolizí s plošinami
+            const entities = [player]; if (botActive) entities.push(bot);
+            entities.forEach(ent => {
+                ent.x += ent.vx;
+                mapPlatforms.forEach(p => {
+                    if (ent.x < p.x + p.w && ent.x + ent.width > p.x && ent.y < p.y + p.h && ent.y + ent.height > p.y) {
+                        if (ent.vx > 0) ent.x = p.x - ent.width; else if (ent.vx < 0) ent.x = p.x + p.w;
+                        ent.vx = 0;
+                    }
+                });
+                ent.y += ent.vy;
+                mapPlatforms.forEach(p => {
+                    if (ent.x < p.x + p.w && ent.x + ent.width > p.x && ent.y < p.y + p.h && ent.y + ent.height > p.y) {
+                        if (ent.vy > 0) { ent.y = p.y - ent.height; ent.vy = 0; ent.grounded = true; } 
+                        else if (ent.vy < 0) { ent.y = p.y + p.h; ent.vy = 0; }
+                    }
+                });
+                if (ent.y > 800) { ent.x = 400; ent.y = 100; ent.vx = 0; ent.vy = 0; }
+            });
+
+            camera.x += (player.x - canvas.width / 2 - camera.x) * 0.08;
+            camera.y += (player.y - canvas.height / 1.6 - camera.y) * 0.08;
+
+            particles.forEach((pt, idx) => { pt.x += pt.vx; pt.y += pt.vy; pt.alpha -= 0.03; if(pt.alpha <= 0) particles.splice(idx, 1); });
+
+            // Synchronizace do sítě s aktuální barvou zbraně
+            if (pvpChannel && Date.now() - lastBroadcast > 50 && !botActive) {
+                pvpChannel.send({ type: 'broadcast', event: 'sync', payload: { 
+                    id: mojeId, name: mujUsername, x: player.x, y: player.y, 
+                    facing: player.facing, isAttacking: player.isAttacking, hp: player.hp,
+                    weaponColor: WEAPONS[player.activeWeapon].color, weaponRange: WEAPONS[player.activeWeapon].range
+                }});
+                lastBroadcast = Date.now();
+            }
+        }
+
+        // --- 8. VYKRESLOVÁNÍ (RENDER) ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "rgba(0, 240, 255, 0.03)"; ctx.lineWidth = 1;
+            let mriza = 60, sX = Math.floor(camera.x / mriza) * mriza, sY = Math.floor(camera.y / mriza) * mriza;
+            for (let x = sX; x < sX + canvas.width + mriza; x += mriza) { ctx.beginPath(); ctx.moveTo(x - camera.x, 0); ctx.lineTo(x - camera.x, canvas.height); ctx.stroke(); }
+            for (let y = sY; y < sY + canvas.height + mriza; y += mriza) { ctx.beginPath(); ctx.moveTo(0, y - camera.y); ctx.lineTo(canvas.width, y - camera.y); ctx.stroke(); }
+
+            ctx.save(); ctx.translate(-camera.x, -camera.y);
+
+            // Podlahy arény
+            mapPlatforms.forEach(p => {
+                ctx.fillStyle = p.color; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, p.h, 4); ctx.fill();
+                ctx.strokeStyle = "#00f0ff"; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = "#00f0ff";
+                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.w, p.y); ctx.stroke();
+            });
+            ctx.shadowBlur = 0;
+
+            // Vykreslení mincí ke sběru
+            spawnedCoins.forEach(c => {
+                ctx.save();
+                ctx.shadowBlur = 15; ctx.shadowColor = "#ffcc00"; ctx.fillStyle = "#ffcc00";
+                let size = 8 + Math.sin(c.pulse) * 2;
+                ctx.beginPath(); ctx.arc(c.x, c.y, size, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            });
+            ctx.shadowBlur = 0;
+
+            // Částice efekty
+            particles.forEach(pt => { ctx.shadowColor = pt.color; ctx.fillStyle = pt.color; ctx.globalAlpha = pt.alpha; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI*2); ctx.fill(); });
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+            // Vykreslení Bota
+            if (botActive) {
+                ctx.shadowBlur = 15; ctx.shadowColor = bot.color; ctx.fillStyle = bot.color;
+                ctx.beginPath(); ctx.roundRect(bot.x, bot.y, 24, 24, 5); ctx.fill();
+                if (bot.isAttacking) {
+                    ctx.fillStyle = "rgba(227, 0, 255, 0.35)";
+                    ctx.beginPath(); ctx.roundRect(bot.facing === 1 ? bot.x + 24 : bot.x - 40, bot.y - 10, 40, 44, 4); ctx.fill();
+                }
+                ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
+                ctx.fillText("Tréninkový Bot 🤖", bot.x + 12, bot.y - 18);
+                ctx.fillStyle = "red"; ctx.fillRect(bot.x - 3, bot.y - 10, 30, 4);
+                ctx.fillStyle = "green"; ctx.fillRect(bot.x - 3, bot.y - 10, (bot.hp / 100) * 30, 4);
+            }
+
+            // Síťoví online spoluhráči
+            if (!botActive) {
+                for (let id in remotePlayers) {
+                    let rp = remotePlayers[id];
+                    ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055"; ctx.fillStyle = "#ff0055";
+                    ctx.beginPath(); ctx.roundRect(rp.x, rp.y, 24, 24, 5); ctx.fill();
+                    
+                    if (rp.isAttacking && rp.weaponColor) {
+                        ctx.fillStyle = rp.weaponColor + "44"; // přidání průhlednosti v hexu
+                        let range = rp.weaponRange || 40;
+                        ctx.beginPath(); ctx.roundRect(rp.facing === 1 ? rp.x + 24 : rp.x - range, rp.y - 10, range, 44, 4); ctx.fill();
+                    }
+                    ctx.shadowBlur = 0; ctx.fillStyle = "#fff"; ctx.font = "bold 11px Arial"; ctx.textAlign = "center";
+                    ctx.fillText(rp.name, rp.x + 12, rp.y - 18);
+                    ctx.fillStyle = "red"; ctx.fillRect(rp.x - 3, rp.y - 10, 30, 4);
+                    ctx.fillStyle = "green"; ctx.fillRect(rp.x - 3, rp.y - 10, (rp.hp / 100) * 30, 4);
+                }
+            }
+
+            // Lokální hráč s barvou a dosahem vybrané zbraně
+            let aktuálníZbraň = WEAPONS[player.activeWeapon];
+            ctx.shadowBlur = 20; ctx.shadowColor = player.color; ctx.fillStyle = player.color;
+            ctx.beginPath(); ctx.roundRect(player.x, player.y, player.width, player.height, 5); ctx.fill();
+            
+            if (player.isAttacking) {
+                ctx.fillStyle = aktuálníZbraň.color + "44"; 
+                ctx.shadowColor = aktuálníZbraň.color; ctx.shadowBlur = 15;
+                let ax = player.facing === 1 ? player.x + player.width : player.x - aktuálníZbraň.range;
+                ctx.beginPath(); ctx.roundRect(ax, player.y - 10, aktuálníZbraň.range, 44, 4); ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
