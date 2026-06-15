@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Netorikaraft - Game Hub</title>
+    <title>Netorikaraft - Cyber Hub Engine</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
@@ -12,298 +12,308 @@
             color: #fff;
             font-family: 'Segoe UI', Arial, sans-serif;
             overflow-x: hidden;
-            background-image: linear-gradient(rgba(0, 240, 255, 0.02) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
-            background-size: 40px 40px;
+            background-image: linear-gradient(rgba(0, 240, 255, 0.01) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 240, 255, 0.01) 1px, transparent 1px);
+            background-size: 30px 30px;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 30px 20px;
-        }
-
-        /* --- HEADER & USER PANEL --- */
-        header {
+        /* --- LOGIN SCREEN --- */
+        #authContainer {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            padding-bottom: 30px;
-            border-bottom: 2px solid rgba(0, 240, 255, 0.1);
-            margin-bottom: 40px;
+            min-height: 100vh;
+            background: #030305;
+            padding: 20px;
         }
-        h1 {
-            font-size: 2.2rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            color: #00f0ff;
-            text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-        }
-        .user-badge {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .user-dot {
-            width: 10px;
-            height: 10px;
-            background: #00ff66;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #00ff66;
-        }
-
-        /* --- MAIN LAYOUT --- */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 30px;
-        }
-
-        @media (max-width: 900px) {
-            .main-layout { grid-template-columns: 1fr; }
-        }
-
-        /* --- GAMES SECTION --- */
-        .section-title {
-            font-size: 1.3rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-            color: #ff0055;
-            text-shadow: 0 0 10px rgba(255, 0, 85, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        .game-card {
-            background: rgba(20, 22, 35, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 25px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
+        .auth-card {
+            background: rgba(15, 17, 28, 0.9);
+            border: 2px solid #00f0ff;
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+            padding: 35px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
             backdrop-filter: blur(10px);
         }
-        .game-card:hover {
-            transform: translateY(-5px);
-            border-color: #00f0ff;
-            box-shadow: 0 5px 20px rgba(0, 240, 255, 0.15);
-        }
-        .game-emoji {
-            font-size: 3rem;
-            margin-bottom: 15px;
-        }
-        .game-name {
-            font-size: 1.4rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #fff;
-        }
-        .game-creator {
-            font-size: 0.85rem;
-            color: #8a8f9f;
-        }
-        .play-tag {
-            margin-top: 20px;
-            padding: 8px;
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid rgba(0, 240, 255, 0.3);
+        .auth-card h2 {
+            text-transform: uppercase;
+            letter-spacing: 2px;
             color: #00f0ff;
-            text-align: center;
-            border-radius: 6px;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 1px;
+            margin-bottom: 25px;
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
         }
-        .game-card:hover .play-tag {
-            background: #00f0ff;
-            color: #050508;
-        }
-
-        /* --- ONLINE PLAYERS SIDEBAR --- */
-        .sidebar {
-            background: rgba(15, 17, 28, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 25px;
-            height: fit-content;
-        }
-        .player-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .player-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .auth-input {
+            width: 100%;
             padding: 12px;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(0, 240, 255, 0.3);
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.03);
-        }
-        .player-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .player-name {
-            font-weight: bold;
-            color: #fff;
-        }
-        .player-game {
-            font-size: 0.8rem;
-            color: #00ff66;
-        }
-        .player-game.in-hub {
-            color: #8a8f9f;
-        }
-        .join-btn {
-            background: #ff0055;
             color: white;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        .auth-input:focus { border-color: #ff0055; }
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: #00f0ff;
+            color: black;
             border: none;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
+            border-radius: 8px;
             font-weight: bold;
-            cursor: pointer;
             text-transform: uppercase;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.4);
-            transition: all 0.2s;
-            pointer-events: auto;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: 0.2s;
         }
-        .join-btn:hover {
-            background: #ff2a73;
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(255, 0, 85, 0.7);
+        .auth-btn:hover { background: #ff0055; color: white; box-shadow: 0 0 15px #ff0055; }
+        .auth-toggle { color: #8a8f9f; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+
+        /* --- MAIN HUB CONTENT (Skrytý před přihlášením) --- */
+        #hubContainer { display: none; max-width: 1300px; margin: 0 auto; padding: 25px; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 20px; border-bottom: 2px solid rgba(0, 240, 255, 0.1); margin-bottom: 30px;
         }
-        .no-players {
-            text-align: center;
-            color: #5a5f6f;
-            font-size: 0.9rem;
-            padding: 20px 0;
+        h1 { font-size: 2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: #00f0ff; text-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
+        
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .user-badge { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.2); padding: 8px 16px; border-radius: 8px; font-weight: bold; }
+        .logout-btn { background: rgba(255, 0, 85, 0.2); border: 1px solid #ff0055; color: #ff0055; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; user-select: none; }
+        .logout-btn:hover { background: #ff0055; color: white; box-shadow: 0 0 10px #ff0055; }
+
+        .main-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 30px; }
+        @media (max-width: 950px) { .main-layout { grid-template-columns: 1fr; } }
+
+        .section-title { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 15px; color: #ff0055; text-shadow: 0 0 10px rgba(255, 0, 85, 0.2); }
+
+        /* --- ČLÁNEK O CEO --- */
+        .ceo-article {
+            background: linear-gradient(135deg, rgba(20, 22, 35, 0.7), rgba(10, 11, 22, 0.9));
+            border-left: 4px solid #bc00ff; border-radius: 12px; padding: 20px; margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(188, 0, 255, 0.05);
         }
+        .article-tag { font-size: 0.75rem; background: #bc00ff; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; width: fit-content; margin-bottom: 10px; text-transform: uppercase; }
+        .ceo-article h3 { font-size: 1.3rem; margin-bottom: 8px; color: #fff; }
+        .ceo-article p { font-size: 0.9rem; color: #b5b9c4; line-height: 1.5; user-select: text; }
+
+        /* --- GAMES GRID --- */
+        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .game-card { background: rgba(20, 22, 35, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; }
+        .game-card:hover { transform: translateY(-3px); border-color: #00f0ff; box-shadow: 0 5px 15px rgba(0, 240, 255, 0.15); }
+        .game-emoji { font-size: 2.5rem; margin-bottom: 10px; }
+        .game-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 4px; }
+        .game-creator { font-size: 0.8rem; color: #8a8f9f; }
+        .play-tag { margin-top: 15px; padding: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0, 240, 255, 0.2); color: #00f0ff; text-align: center; border-radius: 6px; font-weight: bold; font-size: 0.8rem; text-transform: uppercase; }
+        .game-card:hover .play-tag { background: #00f0ff; color: black; }
+
+        /* --- SIDEBAR: FRIENDS & PLAYERS --- */
+        .sidebar { display: flex; flex-direction: column; gap: 25px; }
+        .sidebar-box { background: rgba(15, 17, 28, 0.7); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; }
+        
+        .friend-add-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .friend-input { flex: 1; padding: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; outline: none; font-size: 0.85rem; }
+        .friend-input:focus { border-color: #00ff66; }
+        .friend-btn { background: #00ff66; color: black; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.85rem; }
+
+        .player-list { display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; }
+        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.03); }
+        .player-info { display: flex; flex-direction: column; }
+        .player-name { font-weight: bold; font-size: 0.95rem; }
+        .player-game { font-size: 0.75rem; color: #00ff66; }
+        .player-game.in-hub { color: #8a8f9f; }
+        .friend-star { color: #ffcc00; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
+        .join-btn { background: #ff0055; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .join-btn:hover { background: #ff2a73; box-shadow: 0 0 10px #ff0055; }
+
+        /* --- GLOBAL CHAT --- */
+        .chat-box { display: flex; flex-direction: column; height: 320px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { font-size: 0.85rem; line-height: 1.4; word-break: break-word; user-select: text; }
+        .msg-user { color: #00f0ff; font-weight: bold; }
+        .chat-input-row { display: flex; gap: 10px; }
+        .chat-input { flex: 1; padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(0,240,255,0.2); border-radius: 6px; color: white; outline: none; }
+        .chat-send-btn { background: #00f0ff; color: black; border: none; padding: 0 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .chat-send-btn:hover { background: #fff; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div id="authContainer">
+        <div class="auth-card">
+            <h2 id="authTitle">Přihlášení do sítě</h2>
+            <input type="email" id="authEmail" class="auth-input" placeholder="Tvůj Email">
+            <input type="password" id="authPassword" class="auth-input" placeholder="Heslo">
+            <button class="auth-btn" id="authPrimaryBtn" onclick="handleAuth()">Přihlásit se</button>
+            <div class="auth-toggle" id="authToggleMode" onclick="toggleAuthMode()">Nemáš účet? Zaregistruj se</div>
+        </div>
+    </div>
+
+    <div id="hubContainer">
         <header>
             <h1>Netorikaraft</h1>
-            <div class="user-badge">
-                <div class="user-dot"></div>
-                <span id="localPlayerName">Načítání...</span>
+            <div class="header-right">
+                <div class="user-badge"><span id="localPlayerName">Načítání profilu...</span></div>
+                <button class="logout-btn" onclick="handleLogout()">Odhlásit se</button>
             </div>
         </header>
 
         <div class="main-layout">
             <div>
-                <div class="section-title">🕹️ Dostupné hry</div>
+                <div class="ceo-article">
+                    <div class="article-tag">Aktuality z centrály (2026)</div>
+                    <h3>Novým CEO platformy Netorikaraft se stává Kyber-Vizionář!</h3>
+                    <p>
+                        Správní rada dnes oficiálně potvrdila jmenování nového generálního ředitele pro rok 2026. Nový CEO plánuje kompletní transformaci herního Hubu, integraci ultra-rychlých PvP arén s pokročilou AI technologií pro tréninkové boty a masivní podporu pro komunitní tvůrce hardcore Obby map. „Naším cílem je propojit hráče napříč všemi servery bez jakéhokoliv zpoždění,“ uvedl ve svém prvním vyjádření.
+                    </p>
+                </div>
+
+                <div class="section-title">🕹️ Dostupné simulace</div>
                 <div class="games-grid" id="gamesContainer">
-                    <div style="color: #00f0ff;">Načítám hry z databáze...</div>
+                    <div style="color: #00f0ff;">Načítám dostupné simulace z databáze...</div>
                 </div>
             </div>
 
             <div class="sidebar">
-                <div class="section-title" style="color: #00ff66; text-shadow: 0 0 10px rgba(0,255,102,0.3)">🟢 Kdo zrovna hraje</div>
-                <div class="player-list" id="playersContainer">
-                    <div class="no-players">Hledám aktivní hráče...</div>
+                <div class="sidebar-box">
+                    <div class="section-title" style="color: #00ff66;">🟢 Aktivní Servery</div>
+                    
+                    <div class="friend-add-box">
+                        <input type="text" id="friendInput" class="friend-input" placeholder="Přidat kamaráda jménem...">
+                        <button class="friend-btn" onclick="addFriend()">+ Přidat</button>
+                    </div>
+
+                    <div class="player-list" id="playersContainer">
+                        <div style="color:#5a5f6f; font-size:0.9rem; text-align:center;">Hledám aktivní hráče...</div>
+                    </div>
+                </div>
+
+                <div class="sidebar-box chat-box">
+                    <div class="section-title" style="color: #00f0ff;">💬 Globální Chat Lobby</div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-row">
+                        <input type="text" id="chatInput" class="chat-input" placeholder="Napiš zprávu..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button class="chat-send-btn" onclick="sendChatMessage()">Poslat</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // --- 1. CONFIG SUPABASE ---
+        // --- CONFIG SUPABASE ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         
         let sb = null;
-        let mojeId = "guest_" + Math.floor(Math.random() * 10000);
-        let mujUsername = "Hráč_" + Math.floor(Math.random() * 900 + 100);
-        let globalGamesCache = []; // Uložiště stažených her pro párování tlačítka Připojit se
+        let chatChannel = null;
+        let mojeId = "";
+        let mujUsername = "";
+        let globalGamesCache = [];
+        let isLoginMode = true; // Opravený překlep!
+        let myFriends = JSON.parse(localStorage.getItem('netorika_friends')) || [];
 
+        // Inicializace klienta
         try { 
             sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
         } catch(e) { 
-            console.error("Chyba inicializace Supabase:", e); 
+            console.error("Supabase load error:", e); 
         }
 
-        // --- 2. MULTIPLAYER A HEARTBEAT (UPDATE AKTIVNÍ HRY) ---
-        async function initHub() {
+        // --- KONTROLA PŘIHLÁŠENÍ PO NAČTENÍ ---
+        window.addEventListener('DOMContentLoaded', async () => {
             if(!sb) return;
-
-            // Uchování Guest ID v prohlížeči, aby se neměnilo při každém F5
-            if(localStorage.getItem('netorika_id')) mojeId = localStorage.getItem('netorika_id');
-            else localStorage.setItem('netorika_id', mojeId);
-
-            if(localStorage.getItem('netorika_name')) mujUsername = localStorage.getItem('netorika_name');
-            else localStorage.setItem('netorika_name', mujUsername);
-
-            // Kontrola přihlášeného uživatele (pokud existuje)
+            
             const { data: { user } } = await sb.auth.getUser();
             if (user) {
-                mojeId = user.id;
-                mujUsername = user.user_metadata.display_name || user.email.split('@')[0];
+                showHub(user);
+            } else {
+                // Pokud uživatel není přihlášen, ukaž login screen
+                document.getElementById("authContainer").style.display = "flex";
+                document.getElementById("hubContainer").style.display = "none";
             }
+        });
 
-            document.getElementById("localPlayerName").innerText = mujUsername + " (Ty)";
-
-            // Funkce pro nahlášení, že jsem v HUBU
-            const updateMyStatus = async () => {
-                await sb.from('online_players').upsert({
-                    id: mojeId,
-                    username: mujUsername,
-                    current_game: "Hub", // Nastavení aktuální pozice
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'id' });
-            };
-
-            await updateMyStatus();
-            setInterval(updateMyStatus, 8000); // Heartbeat každých 8 vteřin
-
-            // Načtení her a spuštění smyčky pro refresh online lidí
-            await loadGamesFromDatabase();
-            await refreshOnlinePlayers();
-            setInterval(refreshOnlinePlayers, 3000); // Obnovení seznamu lidí každé 3 vteřiny
+        // --- PŘEPÍNÁNÍ LOGIN / REGISTRACE ---
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById("authTitle").innerText = isLoginMode ? "Přihlášení do sítě" : "Registrace nového ID";
+            document.getElementById("authPrimaryBtn").innerText = isLoginMode ? "Přihlásit se" : "Zaregistrovat";
+            document.getElementById("authToggleMode").innerText = isLoginMode ? "Nemáš účet? Zaregistruj se" : "Již máš účet? Přihlas se";
         }
 
-        // --- 3. NAČTIDÁNÍ HER Z TABULKY 'GAMES' ---
-        async function loadGamesFromDatabase() {
+        // --- SPUŠTĚNÍ AUTH AKCE ---
+        async function handleAuth() {
+            const email = document.getElementById("authEmail").value.trim();
+            const password = document.getElementById("authPassword").value;
+            if(!email || !password) return alert("Vyplň všechna pole!");
+
+            if (isLoginMode) {
+                const { data, error } = await sb.auth.signInWithPassword({ email, password });
+                if (error) alert("Chyba přihlášení: " + error.message);
+                else showHub(data.user);
+            } else {
+                const nick = email.split('@')[0] + Math.floor(Math.random() * 90 + 10);
+                const { data, error } = await sb.auth.signUp({
+                    email, password, options: { data: { display_name: nick } }
+                });
+                if (error) alert("Chyba registrace: " + error.message);
+                else alert("Registrace úspěšná! Nyní se můžeš přihlásit.");
+            }
+        }
+
+        // --- PLŇE FUNKČNÍ ODHLÁŠENÍ (LOGOUT) ---
+        async function handleLogout() {
             if(!sb) return;
+            // Nastavíme stav offline v DB před odchodem
+            await sb.from('online_players').delete().eq('id', mojeId);
+            await sb.auth.signOut();
+            window.location.reload();
+        }
+
+        // --- INICIALIZACE ROZHRANÍ HUBU ---
+        async function showHub(user) {
+            mojeId = user.id;
+            mujUsername = user.user_metadata.display_name || user.email.split('@')[0];
+            
+            document.getElementById("authContainer").style.display = "none";
+            document.getElementById("hubContainer").style.display = "block";
+            document.getElementById("localPlayerName").innerText = mujUsername + " (Ty)";
+
+            // Spuštění Heartbeatu pozice (Update hry)
+            const updateMyStatus = async () => {
+                await sb.from('online_players').upsert({
+                    id: mojeId, username: mujUsername, current_game: "Hub", updated_at: new Date().toISOString()
+                }, { onConflict: 'id' });
+            };
+            await updateMyStatus();
+            setInterval(updateMyStatus, 8000);
+
+            // Zapnutí Realtime Chatu, načtení her a přátel
+            initChatChannel();
+            await loadGamesFromDatabase();
+            await refreshOnlinePlayers();
+            setInterval(refreshOnlinePlayers, 3000);
+        }
+
+        // --- 100% FUNKČNÍ NAČÍTÁNÍ Z TABULKY GAMES + URL REDIRECT ---
+        async function loadGamesFromDatabase() {
             try {
                 const { data, error } = await sb.from('games').select('*');
                 if (error) throw error;
-
                 globalGamesCache = data || [];
+                
                 const container = document.getElementById("gamesContainer");
                 container.innerHTML = "";
 
-                if (globalGamesCache.length === 0) {
-                    container.innerHTML = "<div style='color: #ff5555;'>V tabulce 'games' nebyly nalezeny žádné hry.</div>";
-                    return;
-                }
-
                 globalGamesCache.forEach(game => {
-                    // game obsahuje: id, name, creator, url_part, emoji
                     const card = document.createElement("div");
                     card.className = "game-card";
+                    
+                    // Bezpečné přesměrování na url_part z tabulky
                     card.onclick = () => {
                         window.location.href = game.url_part;
                     };
@@ -311,54 +321,71 @@
                     card.innerHTML = `
                         <div class="game-emoji">${game.emoji || '🎮'}</div>
                         <div class="game-name">${game.name}</div>
-                        <div class="game-creator">Autor: ${game.creator || 'Neznámý'}</div>
-                        <div class="play-tag">Spustit hru</div>
+                        <div class="game-creator">Autor: ${game.creator || 'Komunita'}</div>
+                        <div class="play-tag">Vstoupit do simulace</div>
                     `;
                     container.appendChild(card);
                 });
-
-            } catch (err) {
-                console.error("Chyba při stahování tabulky games:", err);
-                document.getElementById("gamesContainer").innerHTML = "<div style='color: #ff5555;'>Nelze načíst seznam her.</div>";
+            } catch (err) { 
+                console.error("Chyba stahování tabulky games:", err); 
             }
         }
 
-        // --- 4. NAČÍTÁNÍ ONLINE HRÁČŮ A TLAČÍTKO PŘIPOJIT SE ---
+        // --- PRÁCE S PŘÁTELI (Ukládání do LocalStorage) ---
+        function addFriend() {
+            const input = document.getElementById("friendInput");
+            const name = input.value.trim();
+            if(name && !myFriends.includes(name)) {
+                myFriends.push(name);
+                localStorage.setItem('netorika_friends', JSON.stringify(myFriends));
+                input.value = "";
+                refreshOnlinePlayers(); // Okamžitý refresh seznamu pro zobrazení hvězdičky
+            }
+        }
+
+        // --- ZOBRAZENÍ LIVE HRÁČŮ + TLAČÍTKO JOIN ---
         async function refreshOnlinePlayers() {
-            if(!sb) return;
             try {
                 const { data, error } = await sb.from('online_players').select('*');
                 if (error) throw error;
 
                 const container = document.getElementById("playersContainer");
                 container.innerHTML = "";
+                const nyni = Date.now();
 
-                const nyní = Date.now();
+                // Seřazení: Kamarádi (co jsou v poli myFriends) se posunou na vrchol
+                data.sort((a, b) => {
+                    let aFriend = myFriends.includes(a.username) ? 1 : 0;
+                    let bFriend = myFriends.includes(b.username) ? 1 : 0;
+                    return bFriend - aFriend;
+                });
+
                 let nekdoOnline = false;
 
                 data.forEach(player => {
-                    // Odfiltrujeme sami sebe a lidi, co neodpověděli déle než 25 vteřin (offline)
                     const casZmeny = Date.parse(player.updated_at);
-                    if (player.id === mojeId || (nyní - casZmeny > 25000)) return;
+                    // Odfiltruj sebe a lidi, co se neozvali déle než 25 vteřin
+                    if (player.id === mojeId || (nyni - casZmeny > 25000)) return;
 
                     nekdoOnline = true;
                     const row = document.createElement("div");
                     row.className = "player-row";
 
-                    const isInGame = player.current_game && player.current_game !== "Hub" && player.current_game !== "Lobby";
+                    const isFriend = myFriends.includes(player.username);
+                    const isInGame = player.current_game && player.current_game !== "Hub";
                     
-                    // Najdeme hru v cache, abychom získali její přesné url_part
+                    // Najdeme hru v paměti podle názvu, abychom znali její url_part pro připojení
                     const prirazenaHra = globalGamesCache.find(g => g.name.toLowerCase() === player.current_game.toLowerCase());
 
                     let actionHtml = "";
                     if (isInGame && prirazenaHra) {
-                        // Pokud hraje hru, která existuje v tabulce games, vytvoříme 100% funkční Join Button
                         actionHtml = `<button class="join-btn" onclick="window.location.href='${prirazenaHra.url_part}'">Připojit se</button>`;
                     }
 
                     row.innerHTML = `
                         <div class="player-info">
-                            <div class="player-name">${player.username}</div>
+                            ${isFriend ? '<div class="friend-star">⭐ Kamarád</div>' : ''}
+                            <div class="player-name" style="${isFriend ? 'color: #ffcc00;' : ''}">${player.username}</div>
                             <div class="player-game ${!isInGame ? 'in-hub' : ''}">${isInGame ? 'Hraje: ' + player.current_game : 'Prohlíží Hub'}</div>
                         </div>
                         ${actionHtml}
@@ -366,17 +393,40 @@
                     container.appendChild(row);
                 });
 
-                if (!nekdoOnline) {
-                    container.innerHTML = `<div class="no-players">Momentálně tu nikdo další není.</div>`;
+                if(!nekdoOnline) {
+                    container.innerHTML = `<div style="color:#5a5f6f; font-size:0.9rem; text-align:center;">Momentálně tu nikdo další není.</div>`;
                 }
-
-            } catch (err) {
-                console.error("Chyba při načítání hráčů:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // Spuštění Hubu při načtení stránky
-        window.onload = initHub;
+        // --- REALTIME CHAT SYSTÉM ---
+        function initChatChannel() {
+            chatChannel = sb.channel('global_lobby_chat', { config: { broadcast: { self: true } } });
+            chatChannel.on('broadcast', { event: 'msg' }, payload => {
+                appendChatMessage(payload.payload.user, payload.payload.text);
+            });
+            chatChannel.subscribe();
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById("chatInput");
+            const text = input.value.trim();
+            if(!text || !chatChannel) return;
+
+            chatChannel.send({
+                type: 'broadcast', event: 'msg', payload: { user: mujUsername, text: text }
+            });
+            input.value = "";
+        }
+
+        function appendChatMessage(user, text) {
+            const box = document.getElementById("chatMessages");
+            const msgEl = document.createElement("div");
+            msgEl.className = "msg";
+            msgEl.innerHTML = `<span class="msg-user">${user}:</span> ${text}`;
+            box.appendChild(msgEl);
+            box.scrollTop = box.scrollHeight; // Automatické scrollování dolů
+        }
     </script>
 </body>
 </html>
