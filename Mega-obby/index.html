@@ -57,28 +57,28 @@
             backdrop-filter: blur(5px);
         }
         #joystickBound {
-            width: 130px;
-            height: 130px;
+            width: 140px;
+            height: 140px;
             position: relative;
         }
         #joystickThumb {
-            width: 60px;
-            height: 60px;
-            background: rgba(0, 240, 255, 0.8);
+            width: 65px;
+            height: 65px;
+            background: rgba(0, 240, 255, 0.85);
             border-radius: 50%;
             box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
             position: absolute;
-            top: 33px;
-            left: 33px;
-            transition: transform 0.05s linear;
+            top: 35px;
+            left: 35px;
+            transition: transform 0.03s linear;
         }
         #jumpBtn {
-            width: 110px;
-            height: 110px;
+            width: 120px;
+            height: 120px;
             font-weight: 900;
             color: #fff;
             text-shadow: 0 0 10px #00f0ff;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             background: rgba(0, 240, 255, 0.15);
         }
         #jumpBtn:active {
@@ -190,7 +190,7 @@
         let camera = { x: 0, y: 0 };
         let particles = [];
 
-        // --- 3. HARDCORE GENERÁTOR LEVELŮ ---
+        // --- 3. INTELIGENTNÍ HARDCORE GENERÁTOR (OPRAVENÝ) ---
         function generujHardcoreLevely() {
             const levels = [];
             for (let i = 0; i < 100; i++) {
@@ -203,14 +203,11 @@
                 
                 for (let j = 0; j < numJumps; j++) {
                     let platformWidth = Math.max(80 - (i * 0.75), 32);
+                    
                     let gapX = 110 + Math.random() * Math.min(35 + i, 55); 
                     let gapY = (Math.random() - 0.45) * Math.min(60 + (i * 1.8), 130);
 
-                    curX += gapX; curY += gapY;
-
-                    if (curY > 620) curY = 520;
-                    if (curY < 120) curY = 220;
-
+                    // ROZHODNUTÍ O TYPU BLOKU PŘEDEM PRO BEZPEČNOST SKOKŮ
                     let typ = 'block';
                     let barva = '#161925';
 
@@ -219,8 +216,20 @@
                     } 
                     else if (i > 3 && Math.random() < 0.38) {
                         typ = 'lava'; barva = '#ff0055'; platformWidth = Math.max(platformWidth - 8, 25);
-                    } 
-                    else if (i > 8 && Math.random() < 0.45) {
+                    }
+
+                    // OPRAVA PRO LEVEL 5 A VŠECHNY OSTATNÍ: Pokud skočíš na lávu nebo z lávy, omezíme mezeru na férové maximum
+                    if (typ === 'lava' || (platforms[platforms.length - 1] && platforms[platforms.length - 1].type === 'lava')) {
+                        gapX = 100 + Math.random() * 20; // Max 120px, matematicky 100% skočitelné
+                        if (gapY < -30) gapY = -30;     // Zákaz brutálního skákání do ostrého kopce u lávy
+                    }
+
+                    curX += gapX; curY += gapY;
+
+                    if (curY > 620) curY = 520;
+                    if (curY < 120) curY = 220;
+
+                    if (typ === 'block' && i > 8 && Math.random() < 0.45 && typ !== 'checkpoint') {
                         let speed = 0.015 + (i * 0.00025);
                         let mX = Math.random() > 0.5 ? 70 + (Math.random() * 50) : 0;
                         let mY = mX === 0 ? 80 + (Math.random() * 40) : 0;
@@ -276,7 +285,7 @@
         }
         loadLevel(0);
 
-        // --- 4. MOBILNÍ OVLÁDÁNÍ ---
+        // --- 4. VYLEPŠENÉ A PRECYZNÍ MOBILNÍ OVLÁDÁNÍ ---
         const joyBound = document.getElementById("joystickBound");
         const joyThumb = document.getElementById("joystickThumb");
         const jumpBtn = document.getElementById("jumpBtn");
@@ -284,22 +293,29 @@
 
         joyBound.addEventListener("touchstart", (e) => {
             joyActive = true;
-            joyCenterX = joyBound.getBoundingClientRect().left + 65;
-        });
+            joyCenterX = joyBound.getBoundingClientRect().left + 70; // Přesný střed zvětšeného kruhu
+        }, { passive: true });
+
         joyBound.addEventListener("touchmove", (e) => {
             if(!joyActive) return;
-            let displayDelta = Math.max(-35, Math.min(35, e.touches[0].clientX - joyCenterX));
+            let displayDelta = Math.max(-42, Math.min(42, e.touches[0].clientX - joyCenterX));
             joyThumb.style.transform = `translateX(${displayDelta}px)`;
-            if(displayDelta / 35 < -0.15) { keys.Left = true; keys.Right = false; }
-            else if(displayDelta / 35 > 0.15) { keys.Right = true; keys.Left = false; }
+            
+            // Vyšší citlivost na pohyb (stačí menší výchylka pro plný běh)
+            if(displayDelta / 42 < -0.12) { keys.Left = true; keys.Right = false; }
+            else if(displayDelta / 42 > 0.12) { keys.Right = true; keys.Left = false; }
             else { keys.Left = false; keys.Right = false; }
-        });
-        const resetJoy = () => { joyActive = false; joyThumb.style.transform = "translateX(0px)"; keys.Left = false; keys.Right = false; };
-        joyBound.addEventListener("touchend", resetJoy);
-        jumpBtn.addEventListener("touchstart", () => { keys.Up = true; });
-        jumpBtn.addEventListener("touchend", () => { keys.Up = false; });
+        }, { passive: true });
 
-        // --- 5. NEPRŮSTŘELNÁ FYZIKA BEZ ZASEKÁVÁNÍ CHECKPOINTU ---
+        const resetJoy = () => { joyActive = false; joyThumb.style.transform = "translateX(0px)"; keys.Left = false; keys.Right = false; };
+        joyBound.addEventListener("touchend", resetJoy, { passive: true });
+        joyBound.addEventListener("touchcancel", resetJoy, { passive: true });
+
+        // Skok reaguje okamžitě bez ohledu na stav joysticku
+        jumpBtn.addEventListener("touchstart", (e) => { keys.Up = true; }, { passive: true });
+        jumpBtn.addEventListener("touchend", () => { keys.Up = false; }, { passive: true });
+
+        // --- 5. STABILNÍ FYZIKA ENGINE ---
         let lastBroadcast = 0;
         function update() {
             if (keys.Left) player.vx -= player.speed;
@@ -333,7 +349,7 @@
             if (standingOn) { player.x += standingOn.dx; player.y += standingOn.dy; }
             player.grounded = false;
 
-            // X-Kolize (Checkpoint a pevné bloky fungují jako pevná zeď)
+            // X-Kolize
             player.x += player.vx;
             for(let p of plats) {
                 if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
@@ -346,7 +362,7 @@
                 }
             }
 
-            // Y-Kolize (Zde řešíme stabilní přistání na checkpoint bez lagování)
+            // Y-Kolize
             player.y += player.vy;
             for(let p of plats) {
                 if (player.x < p.x + p.w && player.x + player.width > p.x && player.y < p.y + p.h && player.y + player.height > p.y) {
@@ -360,11 +376,10 @@
                         }
                     }
 
-                    // POJISTKA: Checkpoint se aktivuje pouze JEDNOU, což zabrání propadávání a lagování
                     if (p.type === 'checkpoint' && !p.activated) {
                         p.activated = true;
                         checkpoint = { x: p.x + 10, y: p.y - 40 }; 
-                        p.color = "#00ffcc"; // Změní barvu na tyrkysovou jako znak uložení
+                        p.color = "#00ffcc"; 
                         spawnParticles(p.x + p.w/2, p.y, "#00ffcc", 15);
                     }
                     if (p.type === 'finish') { loadLevel(currentLevel + 1); break; }
