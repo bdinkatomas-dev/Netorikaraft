@@ -71,7 +71,7 @@
         .auth-btn:hover { background: #ff0055; color: white; box-shadow: 0 0 15px #ff0055; }
         .auth-toggle { color: #8a8f9f; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
 
-        /* --- MAIN HUB CONTENT (Skrytý před přihlášením) --- */
+        /* --- MAIN HUB CONTENT --- */
         #hubContainer { display: none; max-width: 1300px; margin: 0 auto; padding: 25px; }
 
         header {
@@ -82,7 +82,7 @@
         
         .header-right { display: flex; align-items: center; gap: 15px; }
         .user-badge { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.2); padding: 8px 16px; border-radius: 8px; font-weight: bold; }
-        .logout-btn { background: rgba(255, 0, 85, 0.2); border: 1px solid #ff0055; color: #ff0055; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; user-select: none; }
+        .logout-btn { background: rgba(255, 0, 85, 0.2); border: 1px solid #ff0055; color: #ff0055; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .logout-btn:hover { background: #ff0055; color: white; box-shadow: 0 0 10px #ff0055; }
 
         .main-layout { display: grid; grid-template-columns: 2.2fr 1fr; gap: 30px; }
@@ -204,7 +204,6 @@
     </div>
 
     <script>
-        // --- CONFIG SUPABASE ---
         const SUPABASE_URL = "https://wkhzilhnxkrkyxtukkri.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndraHppbGhueGtya3l4dHVra3JpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTk2NDgsImV4cCI6MjA5NjkzNTY0OH0.Wye7-3_fhjvE4dy2vGML1FNZi_Vx3DGkynbBUHkeC-4";
         
@@ -212,32 +211,33 @@
         let chatChannel = null;
         let mojeId = "";
         let mujUsername = "";
-        let globalGamesCache = [];
-        let isLoginMode = true; // Opravený překlep!
+        let isLoginMode = true;
         let myFriends = JSON.parse(localStorage.getItem('netorika_friends')) || [];
 
-        // Inicializace klienta
-        try { 
-            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
-        } catch(e) { 
-            console.error("Supabase load error:", e); 
+        // --- POMOCNÁ FUNKCE PRO GENERování URL BEZ DIAKRITIKY ---
+        function slugify(text) {
+            if (!text) return "";
+            return text.toString().toLowerCase()
+                .normalize('NFD') // Rozloží znaky (např. 'á' na 'a' + čárka)
+                .replace(/[\u0300-\u036f]/g, '') // Odstraní diakritické značky
+                .replace(/\s+/g, '-') // Nahradí mezery pomlčkami
+                .replace(/[^\w\-]+/g, '') // Odstraní neplatné znaky
+                .replace(/\-\-+/g, '-') // Odstraní zdvojené pomlčky
+                .trim();
         }
 
-        // --- KONTROLA PŘIHLÁŠENÍ PO NAČTENÍ ---
+        try { sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.error(e); }
+
         window.addEventListener('DOMContentLoaded', async () => {
             if(!sb) return;
-            
             const { data: { user } } = await sb.auth.getUser();
-            if (user) {
-                showHub(user);
-            } else {
-                // Pokud uživatel není přihlášen, ukaž login screen
+            if (user) showHub(user);
+            else {
                 document.getElementById("authContainer").style.display = "flex";
                 document.getElementById("hubContainer").style.display = "none";
             }
         });
 
-        // --- PŘEPÍNÁNÍ LOGIN / REGISTRACE ---
         function toggleAuthMode() {
             isLoginMode = !isLoginMode;
             document.getElementById("authTitle").innerText = isLoginMode ? "Přihlášení do sítě" : "Registrace nového ID";
@@ -245,7 +245,6 @@
             document.getElementById("authToggleMode").innerText = isLoginMode ? "Nemáš účet? Zaregistruj se" : "Již máš účet? Přihlas se";
         }
 
-        // --- SPUŠTĚNÍ AUTH AKCE ---
         async function handleAuth() {
             const email = document.getElementById("authEmail").value.trim();
             const password = document.getElementById("authPassword").value;
@@ -265,16 +264,13 @@
             }
         }
 
-        // --- PLŇE FUNKČNÍ ODHLÁŠENÍ (LOGOUT) ---
         async function handleLogout() {
             if(!sb) return;
-            // Nastavíme stav offline v DB před odchodem
             await sb.from('online_players').delete().eq('id', mojeId);
             await sb.auth.signOut();
             window.location.reload();
         }
 
-        // --- INICIALIZACE ROZHRANÍ HUBU ---
         async function showHub(user) {
             mojeId = user.id;
             mujUsername = user.user_metadata.display_name || user.email.split('@')[0];
@@ -283,7 +279,6 @@
             document.getElementById("hubContainer").style.display = "block";
             document.getElementById("localPlayerName").innerText = mujUsername + " (Ty)";
 
-            // Spuštění Heartbeatu pozice (Update hry)
             const updateMyStatus = async () => {
                 await sb.from('online_players').upsert({
                     id: mojeId, username: mujUsername, current_game: "Hub", updated_at: new Date().toISOString()
@@ -292,31 +287,28 @@
             await updateMyStatus();
             setInterval(updateMyStatus, 8000);
 
-            // Zapnutí Realtime Chatu, načtení her a přátel
             initChatChannel();
             await loadGamesFromDatabase();
             await refreshOnlinePlayers();
             setInterval(refreshOnlinePlayers, 3000);
         }
 
-        // --- 100% FUNKČNÍ NAČÍTÁNÍ Z TABULKY GAMES + URL REDIRECT ---
+        // --- NAČÍTÁNÍ HER SE SLUG PATH VERZÍ ---
         async function loadGamesFromDatabase() {
             try {
                 const { data, error } = await sb.from('games').select('*');
                 if (error) throw error;
-                globalGamesCache = data || [];
                 
                 const container = document.getElementById("gamesContainer");
                 container.innerHTML = "";
 
-                globalGamesCache.forEach(game => {
+                (data || []).forEach(game => {
                     const card = document.createElement("div");
                     card.className = "game-card";
                     
-                    // Bezpečné přesměrování na url_part z tabulky
-                    card.onclick = () => {
-                        window.location.href = game.url_part;
-                    };
+                    // Převod jména na bezpečné url s pomlčkami bez diakritiky
+                    const urlPath = slugify(game.name) + ".html";
+                    card.onclick = () => window.location.href = urlPath;
 
                     card.innerHTML = `
                         <div class="game-emoji">${game.emoji || '🎮'}</div>
@@ -326,12 +318,10 @@
                     `;
                     container.appendChild(card);
                 });
-            } catch (err) { 
-                console.error("Chyba stahování tabulky games:", err); 
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // --- PRÁCE S PŘÁTELI (Ukládání do LocalStorage) ---
+        // --- MANIPULACE S PŘÁTELI ---
         function addFriend() {
             const input = document.getElementById("friendInput");
             const name = input.value.trim();
@@ -339,11 +329,11 @@
                 myFriends.push(name);
                 localStorage.setItem('netorika_friends', JSON.stringify(myFriends));
                 input.value = "";
-                refreshOnlinePlayers(); // Okamžitý refresh seznamu pro zobrazení hvězdičky
+                refreshOnlinePlayers();
             }
         }
 
-        // --- ZOBRAZENÍ LIVE HRÁČŮ + TLAČÍTKO JOIN ---
+        // --- REFRESH PANELU A JOIN KAMARÁDA ---
         async function refreshOnlinePlayers() {
             try {
                 const { data, error } = await sb.from('online_players').select('*');
@@ -353,7 +343,7 @@
                 container.innerHTML = "";
                 const nyni = Date.now();
 
-                // Seřazení: Kamarádi (co jsou v poli myFriends) se posunou na vrchol
+                // Řazení: Kamarádi na topu
                 data.sort((a, b) => {
                     let aFriend = myFriends.includes(a.username) ? 1 : 0;
                     let bFriend = myFriends.includes(b.username) ? 1 : 0;
@@ -364,7 +354,6 @@
 
                 data.forEach(player => {
                     const casZmeny = Date.parse(player.updated_at);
-                    // Odfiltruj sebe a lidi, co se neozvali déle než 25 vteřin
                     if (player.id === mojeId || (nyni - casZmeny > 25000)) return;
 
                     nekdoOnline = true;
@@ -374,12 +363,12 @@
                     const isFriend = myFriends.includes(player.username);
                     const isInGame = player.current_game && player.current_game !== "Hub";
                     
-                    // Najdeme hru v paměti podle názvu, abychom znali její url_part pro připojení
-                    const prirazenaHra = globalGamesCache.find(g => g.name.toLowerCase() === player.current_game.toLowerCase());
+                    // Vytvoření dynamického a 100% funkčního slug linku podle názvu hry, kterou hrají
+                    const friendUrlPath = slugify(player.current_game) + ".html";
 
                     let actionHtml = "";
-                    if (isInGame && prirazenaHra) {
-                        actionHtml = `<button class="join-btn" onclick="window.location.href='${prirazenaHra.url_part}'">Připojit se</button>`;
+                    if (isInGame) {
+                        actionHtml = `<button class="join-btn" onclick="window.location.href='${friendUrlPath}'">Připojit se</button>`;
                     }
 
                     row.innerHTML = `
@@ -399,7 +388,7 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- REALTIME CHAT SYSTÉM ---
+        // --- CHAT LOBBY ---
         function initChatChannel() {
             chatChannel = sb.channel('global_lobby_chat', { config: { broadcast: { self: true } } });
             chatChannel.on('broadcast', { event: 'msg' }, payload => {
@@ -425,7 +414,7 @@
             msgEl.className = "msg";
             msgEl.innerHTML = `<span class="msg-user">${user}:</span> ${text}`;
             box.appendChild(msgEl);
-            box.scrollTop = box.scrollHeight; // Automatické scrollování dolů
+            box.scrollTop = box.scrollHeight;
         }
     </script>
 </body>
